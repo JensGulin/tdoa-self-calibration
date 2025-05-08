@@ -1,4 +1,4 @@
-function [bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, varargin)
+function [bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac_txoa(z, varargin)
 % INIT_UVABO_RANSAC Initialize a relaxed TDOA solution
 %   sol = INIT_UVABO_RANSAC(z) initializes a relaxed solution, i.e., a
 %       solution in u, v, a, b and o, using robust methods.
@@ -31,8 +31,6 @@ addParameter(p, 'iters', 100000);
 addParameter(p, 'solver', default_solver);
 %addParameter(p, 'threshold', 0.2);
 addParameter(p, 'threshold', 0.01);
-addParameter(p, 'offset_type', 'tdoa');
-addParameter(p, 'rank', 3);
 parse(p, varargin{:});
 opts = p.Results;
 
@@ -48,21 +46,6 @@ best_err = Inf;
 stats1 = zeros(1, opts.iters);
 stats2 = zeros(3, 0);
 stats2_counter = 0;
-
-%keyboard;
-
-switch opts.offset_type
-    case 'tdoa'
-        need_at_least_rows = opts.rank+3;
-        minimal_solver_nr_of_rows = need_at_least_rows-1;
-    case 'cotoa'
-        need_at_least_rows = opts.rank+2;
-        minimal_solver_nr_of_rows = need_at_least_rows-1;
-    case 'toa'
-        need_at_least_rows = opts.rank+2;
-        minimal_solver_nr_of_rows = need_at_least_rows-1;
-end
-
 
 for iRansac = 1:opts.iters
     % m receivers and n senders.
@@ -133,10 +116,9 @@ for iRansac = 1:opts.iters
         % Which should we try?
         % all cols that are
         % (i) not in pp and
-        % (ii) for which there are at least "need_at_least_rows" measurements
-        % Typically 4-6 depending on rank and offset_type
+        % (ii) for which there are at least 6 measurements
         % except for those with indices in pp
-        okcol = find(sum(ok(rowsol, :)) >= need_at_least_rows); % Det här kanske man ska modifiera (done)
+        okcol = find(sum(ok(rowsol, :)) >= 6);
         restcols = setdiff(okcol, colsol);
         inliersrest = zeros(size(restcols));
         v_rest = zeros(rank_solv, length(restcols));
@@ -146,7 +128,6 @@ for iRansac = 1:opts.iters
         nr_inliers = 0;
         tot_err = 0;
         for ji = 1:length(restcols)
-            %keyboard;
             j = restcols(ji);
             % For each new column,
             % use the fact that we know (u,a)
@@ -154,48 +135,20 @@ for iRansac = 1:opts.iters
             % calculate (vny,bny,ony)
             % so that (z(cc,j)-ony).^2  is equal to -2*(u*vny)+a+bny
             okrow = find(ok(rowsol, j));
-            % For a new column we select a minimum number of 'minimal_solver_nr_of_rows' rows
-            sel5 = okrow(randperm(length(okrow), minimal_solver_nr_of_rows)); % not really 5 elements
-            % Now we should solve for 
-            switch opts.offset_type
-                case 'tdoa'
-                    z_cut = z(rowsol(sel5), j);
-                    u_cut = u(sel5, :);
-                    a_cut = a(sel5);
-                    AAA = [-2 * z_cut, ones(minimal_solver_nr_of_rows, 1), (-u_cut), -ones(minimal_solver_nr_of_rows, 1)];
-                    bbb = a_cut - z_cut.^2;
-                    x_part = AAA \ bbb;
-                    x_hom = [0, 1, zeros(1,opts.rank), 1]';
-                    ony = x_part(1);
-                    lamb = ony^2 - x_part(2);
-                    xxx = x_part + lamb * x_hom;
-                    vny = xxx(3:(3+rank_solv-1)) / (-2); % TODO: Fix to get the -2 right, i.e M/(-2)
-                    bny = xxx(end);
-                case 'cotoa'
-                    % (z(cc,j)-ony).^2  is equal to -2*(u*vny)+a+bny
-                    ony = osol(1);
-                    z_cut = z(rowsol(sel5), j);
-                    d2_cut = (z_cut-ony).^2;
-                    u_cut = u(sel5, :);
-                    a_cut = a(sel5);
-                    AAA = [(-2*u_cut),ones(minimal_solver_nr_of_rows, 1)];
-                    bbb = d2_cut - a_cut;
-                    xxx = AAA \ bbb;
-                    vny = xxx(1:rank_solv); %
-                    bny = xxx(end);
-                case 'toa'
-                    % (z(cc,j)-ony).^2  is equal to -2*(u*vny)+a+bny
-                    ony = 0;
-                    z_cut = z(rowsol(sel5), j);
-                    d2_cut = (z_cut-ony).^2;
-                    u_cut = u(sel5, :);
-                    a_cut = a(sel5);
-                    AAA = [(-2*u_cut),ones(minimal_solver_nr_of_rows, 1)];
-                    bbb = d2_cut - a_cut;
-                    xxx = AAA \ bbb;
-                    vny = xxx(1:rank_solv); %
-                    bny = xxx(end);
-            end;
+            % For a new column we select a minimum number of 5 rows
+            sel5 = okrow(randperm(length(okrow), 5));
+            z_cut = z(rowsol(sel5), j);
+            u_cut = u(sel5, :);
+            a_cut = a(sel5);
+            AAA = [-2 * z_cut, ones(5, 1), (-u_cut), -ones(5, 1)];
+            bbb = a_cut - z_cut.^2;
+            x_part = AAA \ bbb;
+            x_hom = [0, 1, 0, 0, 0, 1]';
+            ony = x_part(1);
+            lamb = ony^2 - x_part(2);
+            xxx = x_part + lamb * x_hom;
+            vny = xxx(3:5) / (-2); % TODO: Fix to get the -2 right, i.e M/(-2)
+            bny = xxx(6);
             v_rest(:, ji) = vny;
             b_rest(1, ji) = bny;
             o_rest(1, ji) = ony;
@@ -203,10 +156,10 @@ for iRansac = 1:opts.iters
             % this column
             err = (sqrt(relu(-2 * (u(okrow, :) * vny) + a(okrow) + bny)) + ony) - z(rowsol(okrow), j);
             inlid = find(abs(err) < opts.threshold);
-            if length(inlid) > minimal_solver_nr_of_rows
+            if length(inlid) > 5
                 inliersrest(ji) = 1;
                 inl_rest(okrow(inlid), ji) = ones(length(inlid), 1);
-                nr_inliers = nr_inliers + length(inlid) - minimal_solver_nr_of_rows;
+                nr_inliers = nr_inliers + length(inlid) - 5;
                 tot_err = tot_err + sum(err(inlid).^2); % I am adding the five zeros here, but nevermind.
             end
         end
@@ -251,8 +204,6 @@ for iRansac = 1:opts.iters
             bestsol.u = u;
             bestsol.v = v;
             bestsol.type = 'uvabo';
-            bestsol.offset_type = opts.offset_type;
-            bestsol.rank = opts.rank;
         end
     end
 end
@@ -260,8 +211,6 @@ end
 if isempty(bestsol)
     error('Failed to find a solution.');
 end
-
-%keyboard;
 
 if strcmpi(opts.display, 'iter') % TODO: Option to enable plots?
     misstdoa_briefer_report(bestsol);

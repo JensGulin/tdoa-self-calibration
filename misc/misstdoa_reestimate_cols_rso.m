@@ -22,7 +22,7 @@ rows = sol.rows;
 for jj = 1:size(z,2)
     %% Do a check that there is enough data for the column to try 
     % trilateration
-    if sum(isfinite(z(rows, jj)))<4,
+    if sum(isfinite(z(rows, jj)))<5, % Changed to 5 got error in trilateration
         continue;
     end
     [yy, oo, inlny, nr_inliers] = tdoa_trilateration_y_one_ransac(z(rows, jj), r, opts.iters, opts.threshold);

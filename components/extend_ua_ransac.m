@@ -8,6 +8,10 @@ function [solout, inlier_count] = extend_ua_ransac(sol, varargin)
 %           threshold - threshold for the absolute error in TDOA measurment
 %               when classifying inliers/outliers.
 
+% The problem involves estimating u with 2 or 3 elements depending on the
+% rank of the problem as well as a with one element. 
+
+
 % Parse inputs.
 p = inputParser;
 addParameter(p, 'iters', 100);
@@ -26,8 +30,8 @@ bestsol = sol;
 possible_rows = 1:size(z, 1);
 possible_rows(sol.rows) = [];
 
-% We need 4 columns for finding unew and anew, and at least 1 for testing.
-possible_rows(sum(isfinite(z(possible_rows, sol.cols)), 2) < 5) = [];
+% We need sol.rank+1 columns for finding unew and anew, and at least 1 for testing.
+possible_rows(sum(isfinite(z(possible_rows, sol.cols)), 2) < sol.rank+2) = [];
 
 if isempty(possible_rows)
     return;
@@ -36,7 +40,7 @@ end
 for i = 1:opts.iters
     newrow = possible_rows(randi(length(possible_rows)));
     possible_cols = sol.cols(isfinite(z(newrow, sol.cols)));
-    use_cols = possible_cols(randperm(length(possible_cols), 4));
+    use_cols = possible_cols(randperm(length(possible_cols), sol.rank+1));
     test_cols = setdiff(possible_cols, use_cols);
 
     % Get indices in sol.cols for use_cols and test_cols.
@@ -57,8 +61,8 @@ for i = 1:opts.iters
     AA = (zsub - osub).^2 - bsub;
     bb = [-2 * vsub; ones(1, length(use_cols))];
     xx = AA / bb;
-    unew = xx(1:3);
-    anew = xx(4);
+    unew = xx(1:sol.rank);
+    anew = xx(end);
 
     % Evaluate using columns in test_cols.
     vtest = sol.v(:, colsorder_test);

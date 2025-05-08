@@ -20,8 +20,13 @@ valid_display = @(x) ismember(x, {'off', 'none', 'iter'});
 addParameter(p, 'display', 'off', valid_display);
 addParameter(p, 'iters', 50);
 addParameter(p, 'threshold', 0.1);
+addParameter(p, 'dims', [3 3]);
 parse(p, varargin{:});
 opts = p.Results;
+
+if length(opts.dims)==1,
+    opts.dims = opts.dims*ones(1,2);
+end
 
 % Display.
 if ~any(strcmpi(opts.display, {'off', 'none'}))
@@ -53,12 +58,24 @@ solvopts.maxIters = 20;
 solvopts.refine = false;
 
 % Get all upgrade solvers.
-solvers = getSolvers();
+dimtype = [num2str(opts.dims(1)) num2str(opts.dims(2))];
 
+switch dimtype
+    case '33'
+        solvers = getSolvers();
+    case '22'
+        solvers = getSolvers_2D2D();
+    case '23'
+        solvers = getSolvers_2D3D();
+    case '32'
+        solvers = getSolvers_3D2D();
+end
 % Keep only those who work with the number of receivers and senders.
 allids = vertcat(solvers.id);
 keep = length(sol.rows) >= allids(:, 1) + 1 & length(sol.cols) >= allids(:, 2) + 1;
 solvers = solvers(keep);
+
+%keyboard;
 
 % RANSAC loop.
 max_inliers = 0;
@@ -71,12 +88,53 @@ for i = 1:opts.iters
     % dense we do not need to worry about missing data.
     sample = createRandomSample(solver.id, prob);
 
-    % Solve minimal problem.
-    [Lti, q] = solver.solve(sample, solvopts);
+    switch dimtype
+        case '32'
+            % transpose sample
+            sample_transpose = sample;
+            sample_transpose.U = sample.V;
+            sample_transpose.V = sample.U;
+            sample_transpose.a = sample.b';
+            sample_transpose.b = sample.a';
+            sample_transpose.indU = sample.indV;
+            sample_transpose.indV = sample.indU;
+            sample_transpose.fullU = sample.fullV;
+            sample_transpose.fullV = sample.fullU;
+            % solve minimal problem
+            [Lti, q] = solver.solve(sample_transpose, solvopts);
+        otherwise
+            % Solve minimal problem.
+            [Lti, q] = solver.solve(sample, solvopts);
+    end
+
 
     for j = 1:length(Lti)
-        Rhat = Lti{j} * sample.fullU;
-        Shat = Lti{j}' \ (sample.fullV + q(:, j));
+        switch dimtype
+            case '33'
+                Rhat = Lti{j} * sample.fullU;
+                Shat = Lti{j}' \ (sample.fullV + q(:, j));
+            case '22'
+                Rhat = Lti{j} * sample.fullU;
+                Shat = Lti{j}' \ (sample.fullV + q(:, j));
+            case '23'
+                Rhat = Lti{j} * sample.fullU;
+                Shat = Lti{j}' \ (sample.fullV + q(:, j));
+                Dhat = pdist2(Rhat', Shat');
+                S3_squared = nanmedian(prob.Dmeas.^2-Dhat.^2);
+                Rhat = [Rhat;zeros(1,size(Rhat,2))];
+                Shat = [Shat;sqrt(relu(S3_squared))];
+            case '32'
+                RhatT = Lti{j} * sample_transpose.fullU;
+                ShatT = Lti{j}' \ (sample_transpose.fullV + q(:, j));
+                % transpose solution
+                Rhat = ShatT;
+                Shat = RhatT;
+                % Add third dimension
+                Dhat = pdist2(Rhat', Shat');
+                R3_squared = nanmedian(prob.Dmeas.^2-Dhat.^2,2)';
+                Rhat = [Rhat;sqrt(relu(R3_squared))];
+                Shat = [Shat;zeros(1,size(Shat,2))];
+        end
 
         % Calculate error in distances.
         Dhat = pdist2(Rhat', Shat');
@@ -91,6 +149,8 @@ for i = 1:opts.iters
             solout.q = q(:, j);
             solout.u = sample.fullU';
             solout.v = sample.fullV;
+            solout.offset_type = sol.offset_type;
+            solout.dims = opts.dims;
 
             if strcmpi(opts.display, 'iter')
                 fprintf('Iter %3d: inliers = %3d, solver = %s\n',...

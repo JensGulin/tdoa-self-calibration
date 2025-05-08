@@ -20,11 +20,27 @@ opts = p.Results;
 
 %keyboard;
 if 1,
-    jacresfunction = @misstdoa_jacres_v2_fixneg;
+    switch sol.rank
+        case 2
+            jacresfunction = @misstdoa_jacres_v2_fixneg_rank2;
+        case 3
+            jacresfunction = @misstdoa_jacres_v2_fixneg;
+    end
 else
-    jacresfunction = @misstdoa_jacres_v2;
+    switch sol.rank
+        case 2
+            jacresfunction = @misstdoa_jacres_v2;
+        case 3
+            jacresfunction = @misstdoa_jacres_v2_rank2;
+    end
 end
 
+%keyboard;
+if 0,
+    [res, jac] = jacresfunction(sol);
+    misstdoa_briefer_report(sol);
+    misstdoa_brief_visualization(sol);
+end;
 
 % Display.
 if ~any(strcmpi(opts.display, {'off', 'none'}))
@@ -37,27 +53,70 @@ regularization = 1e-2;
 % Certain variables are not allowed to change
 m1 = length(sol.rows);
 n1 = length(sol.cols);
-% residual is size Mx1
-% parameter order
-% w1 w2 w3 v1 v2 v3 c d o
-N = 3 * m1 + 3 * n1 + m1 + n1 + n1;
-%
-Jw1 = 1:m1;
-Jw2 = (1:m1) + m1;
-Jw3 = (1:m1) + 2 * m1;
-Jv1 = (1:n1) + 3 * m1;
-Jv2 = (1:n1) + 3 * m1 + 1 * n1;
-Jv3 = (1:n1) + 3 * m1 + 2 * n1;
-Jc = (1:m1) + 3 * m1 + 3 * n1;
-Jd = (1:n1) + 4 * m1 + 3 * n1;
-Jo = (1:n1) + 4 * m1 + 4 * n1;
-dontmoveindex = [ ...
-    Jw1(1:4), Jw2(1:4), Jw3(1:4), ...
-    Jv1(1), Jv2(1), Jv3(1), ...
-    Jc(1), ...
-    ];
-EE = speye(N, N);
-EE(:, dontmoveindex) = [];
+
+
+% Construct EE matrix that is used to handle the different constraints
+
+switch sol.rank
+    case 2
+        % residual is size Mx1
+        % parameter order
+        % w1 w2 w3 v1 v2 v3 c d o
+        N = 2 * m1 + 2 * n1 + m1 + n1 + n1;
+        %
+        Jw1 = 1:m1;
+        Jw2 = (1:m1) + m1;
+        Jv1 = (1:n1) + 2 * m1;
+        Jv2 = (1:n1) + 2 * m1 + 1 * n1;
+        Jc = (1:m1) + 2 * m1 + 2 * n1;
+        Jd = (1:n1) + 3 * m1 + 2 * n1;
+        Jo = (1:n1) + 3 * m1 + 3 * n1;
+        dontmoveindex = [ ...
+            Jw1(1:3), Jw2(1:3), ...
+            Jv1(1), Jv2(1), ...
+            Jc(1), ...
+            ];
+        EE = speye(N, N);
+        % First fix the offset indices
+        switch sol.offset_type
+            case 'cotoa'
+                EE(Jo,Jo(1)) = ones(n1,1); % This is so that all offsets are changed in the same way
+                dontmoveindex = [dontmoveindex Jo(2:end)]; % Remove the other columns.
+            case 'toa'
+                dontmoveindex = [dontmoveindex Jo]; % Don't change the offsets.
+        end
+        EE(:, dontmoveindex) = [];
+    case 3
+        % residual is size Mx1
+        % parameter order
+        % w1 w2 w3 v1 v2 v3 c d o
+        N = 3 * m1 + 3 * n1 + m1 + n1 + n1;
+        %
+        Jw1 = 1:m1;
+        Jw2 = (1:m1) + m1;
+        Jw3 = (1:m1) + 2 * m1;
+        Jv1 = (1:n1) + 3 * m1;
+        Jv2 = (1:n1) + 3 * m1 + 1 * n1;
+        Jv3 = (1:n1) + 3 * m1 + 2 * n1;
+        Jc = (1:m1) + 3 * m1 + 3 * n1;
+        Jd = (1:n1) + 4 * m1 + 3 * n1;
+        Jo = (1:n1) + 4 * m1 + 4 * n1;
+        dontmoveindex = [ ...
+            Jw1(1:4), Jw2(1:4), Jw3(1:4), ...
+            Jv1(1), Jv2(1), Jv3(1), ...
+            Jc(1), ...
+            ];
+        EE = speye(N, N);
+        % First fix the offset indices
+        switch sol.offset_type
+            case 'cotoa'
+                EE(Jo,Jo(1)) = ones(n1,1); % This is so that all offsets are changed in the same way
+                dontmoveindex = [dontmoveindex Jo(2:end)]; % Remove the other columns.
+            case 'toa'
+                dontmoveindex = [dontmoveindex Jo]; % Don't change the offsets.
+        end
+        EE(:, dontmoveindex) = [];
+end
 
 %%
 %keyboard;
@@ -115,19 +174,19 @@ for kkk = 1:opts.max_iters
     %         cc
     % Explanation. These can be used while debugging or understanding
     % how the optimization works.
-    % aa contains 
+    % aa contains
     %   1. the norm of the old residuals
     %   2. the norm of the new residuals as estimated using linearization
     %   3. the norm of the new residual
     % Ideally 2 should be lower than 1
-    % and 3 should be similar to 2 
+    % and 3 should be similar to 2
     % and therefore also lower than 1
     % If 2 and 3 are almost equal and lower than 1
     % then the linearisation is good and the optimization worked
-    % If 2 and 3 are very different then the linearization is bad. 
+    % If 2 and 3 are very different then the linearization is bad.
     % If 3 is higher than 1, then one should make the search step smaller
-    % 
-    
+    %
+
     if norm(res2) < norm(res)
         sol = soln;
         if norm(res2) < opts.tol
@@ -159,4 +218,4 @@ end
 % solout.a = real(solout.a);
 % solout.b = real(solout.b);
 % solout.o = real(solout.o);
-% 
+%
