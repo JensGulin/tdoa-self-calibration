@@ -23,6 +23,8 @@ if ~any(strcmpi(opts.display, {'off', 'none'}))
     fprintf('Refining solution over R, S, o.\n');
 end
 
+%keyboard;
+
 % Extract variables for convenience.
 z = sol.z(sol.rows, sol.cols);
 r = sol.r;
@@ -36,6 +38,24 @@ Z = z(inliers);
 for i = 1:opts.max_iters
     [res, jac] = calcresandjac(r, s, o, I, J, Z);
 
+    %%
+    m1 = size(r,2);
+    n1 = size(s,2);
+    N = 3 * m1 + 3 * n1 + n1;
+    Jo = (1:n1) + 3 * m1 + 3 * n1;
+    dontmoveindex = []; 
+
+        EE = speye(N, N);
+        % First fix the offset indices
+        switch sol.offset_type
+            case 'cotoa'
+                EE(Jo,Jo(1)) = ones(n1,1); % This is so that all offsets are changed in the same way
+                dontmoveindex = [dontmoveindex Jo(2:end)]; % Remove the other columns.
+            case 'toa'
+                dontmoveindex = [dontmoveindex Jo(1:end)]; % Remove the other columns.
+        end
+        EE(:, dontmoveindex) = [];
+
     if strcmpi(opts.display, 'iter')
         fprintf('Iter %3d: norm(res)=%e, rms(res)=%e\n', i, norm(res), rms(res));
     end
@@ -45,10 +65,13 @@ for i = 1:opts.max_iters
     end
 
     % Gauss-Newton step.
-    dz = -(jac' * jac + 1e-6 * speye(size(jac, 2))) \ (jac' * res);
+    jac0 = jac * EE;
+    dz = -EE*((jac0' * jac0 + 1e-4 * speye(size(jac0, 2))) \ (jac0' * res));
 
     [rnew, snew, onew] = update(r, s, o, dz);
     resnew = calcresandjac(rnew, snew, onew, I, J, Z);
+
+    [norm(res) norm(res+jac*dz) norm(resnew)]
 
     % If no improvement, try reducing the step size.
     j = 0;

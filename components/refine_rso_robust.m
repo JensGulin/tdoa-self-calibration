@@ -26,7 +26,7 @@ opts = p.Results;
 if ~any(strcmpi(opts.display, {'off', 'none'}))
     fprintf('Refining solution over R, S, o.\n');
 end
-
+keyboard;
 % Extract variables for convenience.
 z = sol.z(sol.rows, sol.cols);
 r = sol.r;

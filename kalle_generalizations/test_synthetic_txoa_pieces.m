@@ -224,6 +224,10 @@ asolver.rank = 3;
 misstdoa_briefer_report(sol);
 misstdoa_brief_visualization(sol);
 sol = extend_uvabo_ransac(sol, 'display','iter')
+[sol, res, jac] = refine_uvabo(sol,'display','iter');
+misstdoa_briefer_report(sol);
+misstdoa_brief_visualization(sol);
+solrso = upgrade_ransac(sol,'display', 'iter', 'threshold', 0.0001);
 
 
 %% CASE 4 - Generate synthetic data. COTOA RANK 2

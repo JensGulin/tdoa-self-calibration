@@ -20,22 +20,59 @@ r = sol.r;
 rows = sol.rows;
 
 for jj = 1:size(z,2)
-    %% Do a check that there is enough data for the column to try 
+    %% Do a check that there is enough data for the column to try
     % trilateration
-    if sum(isfinite(z(rows, jj)))<5, % Changed to 5 got error in trilateration
-        continue;
+    switch sol.offset_type
+        case 'tdoa'
+            if sum(isfinite(z(rows, jj)))<5, % Changed to 5 got error in trilateration
+                continue;
+            end
+            [yy, oo, inlny, nr_inliers] = tdoa_trilateration_y_one_ransac(z(rows, jj), r, opts.iters, opts.threshold);
+            if nr_inliers < 4
+                continue;
+            end
+            yy = real(yy);
+            oo = real(oo);
+            [sny, ony, resny] = tdoa_trilateration_y_one_bundle(z(rows, jj), r, yy, oo, inlny);
+            nr_inliers_ny = length(inlny);
+            inlny2 = false(length(rows), 1);
+            inlny2(inlny) = true;
+            rms_ny = sqrt(resny'*resny);
+        case 'cotoa'
+            oo = median(sol.o);
+            if sum(isfinite(z(rows, jj)))<4, % Changed to 4 got error in trilateration
+                continue;
+            end
+            [yy, inlny, nr_inliers] = toa_trilateration_one_ransac(z(rows,jj)-oo, r, opts.iters, opts.threshold);
+            if nr_inliers < 3
+                continue;
+            end
+           %[yy,oo,inlny,nr_inlierid,err_rms] = tdoa_trilateration_y_one_ransac(z(rows,jj),r,ransac_k,ransac_tol);
+           yy = real(yy);
+           [sny, resny] = toa_trilateration_one_bundle(z(rows,jj)-oo, r, yy, inlny);
+           ony = oo;
+           nr_inliers_ny = length(inlny);
+           inlny2 = false(1, length(rows));
+           inlny2(inlny) = true;
+           rms_ny = sqrt(resny'*resny);
+        case 'toa'
+            oo = 0;
+            if sum(isfinite(z(rows, jj)))<4, % Changed to 4 got error in trilateration
+                continue;
+            end
+            [yy, inlny, nr_inliers] = toa_trilateration_one_ransac(z(rows,jj), r, opts.iters, opts.threshold);
+            if nr_inliers < 3
+                continue;
+            end
+           %[yy,oo,inlny,nr_inlierid,err_rms] = tdoa_trilateration_y_one_ransac(z(rows,jj),r,ransac_k,ransac_tol);
+           yy = real(yy);
+           [sny, resny] = toa_trilateration_one_bundle(z(rows,jj), r, yy, inlny);
+           ony = oo;
+           nr_inliers_ny = length(inlny);
+           inlny2 = false(1, length(rows));
+           inlny2(inlny) = true;
+           rms_ny = sqrt(resny'*resny);
     end
-    [yy, oo, inlny, nr_inliers] = tdoa_trilateration_y_one_ransac(z(rows, jj), r, opts.iters, opts.threshold);
-    if nr_inliers < 4
-        continue;
-    end
-    yy = real(yy);
-    oo = real(oo);
-    [sny, ony, resny] = tdoa_trilateration_y_one_bundle(z(rows, jj), r, yy, oo, inlny);
-    nr_inliers_ny = length(inlny);
-    inlny2 = false(length(rows), 1);
-    inlny2(inlny) = true;
-    rms_ny = sqrt(resny'*resny);
     %[length(inlny) std(resny)]
 
     % Is there a previous guess?
