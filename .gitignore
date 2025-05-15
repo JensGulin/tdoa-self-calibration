@@ -1,2 +1,4 @@
 .DS_Store
 kalle_neurips_tests.m
+# Matlab auto-save files
+*.asv

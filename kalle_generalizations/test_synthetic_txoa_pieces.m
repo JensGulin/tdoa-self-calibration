@@ -223,6 +223,7 @@ asolver.rank = 3;
 [sol, res, jac] = refine_uvabo(bestsol,'display','iter');
 misstdoa_briefer_report(sol);
 misstdoa_brief_visualization(sol);
+% TODO JAG Why only here?
 sol = extend_uvabo_ransac(sol, 'display','iter')
 [sol, res, jac] = refine_uvabo(sol,'display','iter');
 misstdoa_briefer_report(sol);

@@ -9,3 +9,6 @@ addpath('util');
 % https://github.com/martinkjlarsson/upgrade-methods
 addpath('../upgrade-methods');
 addpath('../upgrade-methods/solvers');
+
+% TODO JAG: Move to test or rename?
+addpath('kalle_generalizations');

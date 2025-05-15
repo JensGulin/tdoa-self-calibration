@@ -8,6 +8,7 @@ function sol = refine_rso(sol, varargin)
 %           iter - printouts for each iteration of RANSAC/optimization
 %       max_iters - maximum number of interations in optimization.
 %       tol - tolerance for RMS error.
+% TODO JAG Merge with refine_rso_robust
 
 % Parse inputs.
 p = inputParser;
@@ -41,10 +42,11 @@ for i = 1:opts.max_iters
     %%
     m1 = size(r,2);
     n1 = size(s,2);
-    N = 3 * m1 + 3 * n1 + n1;
-    Jo = (1:n1) + 3 * m1 + 3 * n1;
+    N = 3 * m1 + 3 * n1 + n1;  % TODO JAG MAGIC dimensions?
+    Jo = (1:n1) + N - n1;  % TODO JAG name and explain
     dontmoveindex = []; 
 
+    % TODO JAG reindent and check. tdoa?
         EE = speye(N, N);
         % First fix the offset indices
         switch sol.offset_type
@@ -66,12 +68,12 @@ for i = 1:opts.max_iters
 
     % Gauss-Newton step.
     jac0 = jac * EE;
-    dz = -EE*((jac0' * jac0 + 1e-4 * speye(size(jac0, 2))) \ (jac0' * res));
+    dz = -EE*((jac0' * jac0 + 1e-4 * speye(size(jac0, 2))) \ (jac0' * res)); % TODO MAGIC. See tol?
 
     [rnew, snew, onew] = update(r, s, o, dz);
     resnew = calcresandjac(rnew, snew, onew, I, J, Z);
 
-    [norm(res) norm(res+jac*dz) norm(resnew)]
+    [norm(res) norm(res+jac*dz) norm(resnew)]  % TODO JAG conditional or discard?
 
     % If no improvement, try reducing the step size.
     j = 0;
@@ -80,7 +82,7 @@ for i = 1:opts.max_iters
         [rnew, snew, onew] = update(r, s, o, dz);
         resnew = calcresandjac(rnew, snew, onew, I, J, Z);
         j = j + 1;
-        if j > 50
+        if j > 50 % TODO MAGIC
             break;
         end
     end

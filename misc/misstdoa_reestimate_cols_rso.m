@@ -1,5 +1,6 @@
 function [solut] = misstdoa_reestimate_cols_rso(sol, varargin)
 % [solut]=misstdoa_reestimate_cols_theta1(sol);
+% TODO JAG merge with misstdoa_reestimate_rows_rso?
 
 % Parse inputs.
 p = inputParser;
@@ -20,8 +21,8 @@ r = sol.r;
 rows = sol.rows;
 
 for jj = 1:size(z,2)
-    %% Do a check that there is enough data for the column to try
-    % trilateration
+    %% Check early that column has enough data for trilateration
+    % TODO JAG MAGIC <5 <4 nr_inliers
     switch sol.offset_type
         case 'tdoa'
             if sum(isfinite(z(rows, jj)))<5, % Changed to 5 got error in trilateration
@@ -35,7 +36,7 @@ for jj = 1:size(z,2)
             oo = real(oo);
             [sny, ony, resny] = tdoa_trilateration_y_one_bundle(z(rows, jj), r, yy, oo, inlny);
             nr_inliers_ny = length(inlny);
-            inlny2 = false(length(rows), 1);
+            inlny2 = false(length(rows), 1);  % TODO JAG flip to align with the others?
             inlny2(inlny) = true;
             rms_ny = sqrt(resny'*resny);
         case 'cotoa'

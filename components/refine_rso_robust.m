@@ -26,7 +26,7 @@ opts = p.Results;
 if ~any(strcmpi(opts.display, {'off', 'none'}))
     fprintf('Refining solution over R, S, o.\n');
 end
-keyboard;
+keyboard; % TODO JAG Merge with refine_rso_robust
 % Extract variables for convenience.
 z = sol.z(sol.rows, sol.cols);
 r = sol.r;

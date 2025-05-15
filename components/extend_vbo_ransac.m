@@ -81,12 +81,12 @@ for i = 1:opts.iters
         case 'tdoa'
             AAA = [-2 * zsub, ones(min_data, 1), (-usub), -ones(min_data, 1)];
             bbb = asub - zsub.^2;
-            xx_part = AA \ bb;
+            xx_part = AAA \ bbb;
             xx_hom = [0, 1, zeros(1,sol.rank), 1]';
             onew = xx_part(1);
             lamb = onew^2 - xx_part(2);
             xx = xx_part + lamb * xx_hom;
-            vnew = xx(3:(3+sol.rank-1)) / (-2); % TODO: Add -2 to AA instead.
+            vnew = xx(3:(3+sol.rank-1)) / (-2); % TODO: Add -2 to AAA instead.
             bnew = xx(end);
         case 'cotoa'
             % (z(cc,j)-ony).^2  is equal to -2*(u*vny)+a+bny
