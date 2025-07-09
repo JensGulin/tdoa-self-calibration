@@ -36,9 +36,9 @@ else
     % Main part (more data (md) than dimensionality of problem xdim
     
     counter = 0;
-    ys = zeros(xdim,2*ransac_k);
-    evals = zeros(1,2*ransac_k);
-    nr_inliers = zeros(1,2*ransac_k);
+    ys = nan(xdim,2*ransac_k);
+    evals = nan(1,2*ransac_k);
+    nr_inliers = nan(1,2*ransac_k);
     %keyboard;
     for kk = 1:ransac_k
         rp = randperm(md);

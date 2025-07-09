@@ -17,7 +17,7 @@ switch lower(sol.type)
         
         %utmp = sqrt(abs(sol.w*sol.v+ repmat(sol.c_anchor,1,n)+repmat(sol.d2_anchor,m,1)))+repmat(sol.o,m,1);
         
-        zcalc = zeros(size(z));
+        zcalc = nan(size(z));
         zcalc(sol.rows,sol.cols) = ztmp;
         
         zok = zeros(size(z));
@@ -28,7 +28,7 @@ switch lower(sol.type)
         tmp = toa_calc_d_from_xy(sol.r, sol.s);
         ztmp = tmp + repmat(sol.o,m,1);
         
-        zcalc = zeros(size(z));
+        zcalc = nan(size(z));
         zcalc(sol.rows,sol.cols) = ztmp;
         zok = sol.inlmatrix;
         
