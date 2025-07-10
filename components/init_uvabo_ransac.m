@@ -17,7 +17,7 @@ function [bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z,
 % 3. Inliers are counted and the best solution is kept.
 
 % Default solver.
-default_solver.solv = @solver_toda_rank3_95;
+default_solver.solv = @solver_tdoa_rank3_95;
 default_solver.name = func2str(default_solver.solv);
 default_solver.m = 9;
 default_solver.n = 5;
@@ -35,6 +35,8 @@ addParameter(p, 'offset_type', 'tdoa');
 addParameter(p, 'rank', 3);
 parse(p, varargin{:});
 opts = p.Results;
+%TODO: Reconsider solver selection, read rank etc from the solver.
+% If no solver given, use the function to get them.
 
 % Display.
 if ~any(strcmpi(opts.display, {'off', 'none'}))
@@ -49,8 +51,11 @@ stats1 = zeros(1, opts.iters);
 stats2 = zeros(3, 0);
 stats2_counter = 0;
 
-%keyboard;
-
+% The problem type defines how much data is needed,
+% based on how many unknowns there are.
+% Typically 4-6 depending on rank and offset_type.
+% Additional data is needed to verify the minimal solution,
+% so we usually count inliers excluding the data used by the solver.
 switch opts.offset_type
     case 'tdoa'
         need_at_least_rows = opts.rank+3;
@@ -62,6 +67,9 @@ switch opts.offset_type
         need_at_least_rows = opts.rank+2;
         minimal_solver_nr_of_rows = need_at_least_rows-1;
 end
+% TODO: Reconsider this. Suppose the criteria is > minimal for
+% verification and the value is dictated by the solver. If the solver is
+% smaller than need_at_least_rows-1 it should be discarded, right?
 
 
 for iRansac = 1:opts.iters
@@ -103,12 +111,12 @@ for iRansac = 1:opts.iters
     for iSol = 1:nsols
         osol = sols(:, iSol).';
         if any(abs(imag(osol))./abs(osol) > 1e-6)
-            continue;
+            continue; % Discard imaginary solutions
         end
         osol = real(osol);
         zsol = z(rowsol, colsol);
         dsol = zsol - osol;
-        if any(dsol(:) <= 0)
+        if any(dsol(:) <= 0) % TODO: Need some margin here?
             continue;
         end
 
@@ -126,7 +134,6 @@ for iRansac = 1:opts.iters
         % The following should now hold:
         % dsol.^2 = (zsol-osol).^2 = -2*(u*v)+a+b
 
-
         % TODO: Clean up code below and extract function.
 
         % Now check for inliers among the rest of the cols??
@@ -134,8 +141,6 @@ for iRansac = 1:opts.iters
         % all cols that are
         % (i) not in pp and
         % (ii) for which there are at least "need_at_least_rows" measurements
-        % Typically 4-6 depending on rank and offset_type
-        % except for those with indices in pp
         okcol = find(sum(ok(rowsol, :)) >= need_at_least_rows); % Det här kanske man ska modifiera (done)
         restcols = setdiff(okcol, colsol);
         inliersrest = zeros(size(restcols));
@@ -145,67 +150,62 @@ for iRansac = 1:opts.iters
         inl_rest = zeros(m_solv, length(restcols));
         nr_inliers = 0;
         tot_err = 0;
-        for ji = 1:length(restcols)
+        for iCol = 1:length(restcols)
             %keyboard;
-            j = restcols(ji);
+            col_idx = restcols(iCol);
             % For each new column,
             % use the fact that we know (u,a)
-            % and
-            % calculate (vny,bny,ony)
-            % so that (z(cc,j)-ony).^2  is equal to -2*(u*vny)+a+bny
-            okrow = find(ok(rowsol, j));
-            % For a new column we select a minimum number of 'minimal_solver_nr_of_rows' rows
-            sel5 = okrow(randperm(length(okrow), minimal_solver_nr_of_rows)); % not really 5 elements
+            % and calculate (vny,bny,ony)
+
+            % First select a minimum number of ok rows for the solver.
+            okrow = find(ok(rowsol, col_idx));
+            rows_cut = okrow(randperm(length(okrow), minimal_solver_nr_of_rows));
+            z_cut = z(rowsol(rows_cut), col_idx);
+            u_cut = u(rows_cut, :);
+            a_cut = a(rows_cut);
             % Now we should solve for 
+            % (z(cc,col_idx)-ony).^2  is equal to -2*(u*vny)+a+bny
             switch opts.offset_type
                 case 'tdoa'
-                    z_cut = z(rowsol(sel5), j);
-                    u_cut = u(sel5, :);
-                    a_cut = a(sel5);
-                    AAA = [-2 * z_cut, ones(minimal_solver_nr_of_rows, 1), (-u_cut), -ones(minimal_solver_nr_of_rows, 1)];
-                    bbb = a_cut - z_cut.^2;
+                    % In this case we need to get ony as well.
+                    % Expand (z-ony).^2 as z^2 -2z*ony + ony^2
+                    % and rearrange to
+                    % -2u*vny -1*ony^2 + 2z*ony + 1*bny == z^2 - a
+                    AAA = [(-2*u_cut), -ones(minimal_solver_nr_of_rows, 1),... 
+                        2*z_cut, ones(minimal_solver_nr_of_rows, 1)];
+                    bbb = z_cut.^2 - a_cut;
                     x_part = AAA \ bbb;
-                    x_hom = [0, 1, zeros(1,opts.rank), 1]';
-                    ony = x_part(1);
-                    lamb = ony^2 - x_part(2);
+                    x_hom = [zeros(1,opts.rank), 1, 0, 1]';
+                    ony = x_part(end-1);
+                    % Adjust bny if o^2 was off the mark.
+                    lamb = ony^2 - x_part(end-2);
                     xxx = x_part + lamb * x_hom;
-                    vny = xxx(3:(3+rank_solv-1)) / (-2); % TODO: Fix to get the -2 right, i.e M/(-2)
-                    bny = xxx(end);
                 case 'cotoa'
-                    % (z(cc,j)-ony).^2  is equal to -2*(u*vny)+a+bny
                     ony = osol(1);
-                    z_cut = z(rowsol(sel5), j);
                     d2_cut = (z_cut-ony).^2;
-                    u_cut = u(sel5, :);
-                    a_cut = a(sel5);
                     AAA = [(-2*u_cut),ones(minimal_solver_nr_of_rows, 1)];
                     bbb = d2_cut - a_cut;
                     xxx = AAA \ bbb;
-                    vny = xxx(1:rank_solv); %
-                    bny = xxx(end);
                 case 'toa'
-                    % (z(cc,j)-ony).^2  is equal to -2*(u*vny)+a+bny
+                    % (z(cc,col_idx)-ony).^2  is equal to -2*(u*vny)+a+bny
                     ony = 0;
-                    z_cut = z(rowsol(sel5), j);
                     d2_cut = (z_cut-ony).^2;
-                    u_cut = u(sel5, :);
-                    a_cut = a(sel5);
                     AAA = [(-2*u_cut),ones(minimal_solver_nr_of_rows, 1)];
                     bbb = d2_cut - a_cut;
                     xxx = AAA \ bbb;
-                    vny = xxx(1:rank_solv); %
-                    bny = xxx(end);
-            end;
-            v_rest(:, ji) = vny;
-            b_rest(1, ji) = bny;
-            o_rest(1, ji) = ony;
+            end
+            vny = xxx(1:rank_solv);
+            bny = xxx(end);
+            v_rest(:, iCol) = vny;
+            b_rest(1, iCol) = bny;
+            o_rest(1, iCol) = ony;
             % ... and then check for inliers among measurements in
             % this column
-            err = (sqrt(relu(-2 * (u(okrow, :) * vny) + a(okrow) + bny)) + ony) - z(rowsol(okrow), j);
+            err = (sqrt(relu(-2 * (u(okrow, :) * vny) + a(okrow) + bny)) + ony) - z(rowsol(okrow), col_idx);
             inlid = find(abs(err) < opts.threshold);
             if length(inlid) > minimal_solver_nr_of_rows
-                inliersrest(ji) = 1;
-                inl_rest(okrow(inlid), ji) = ones(length(inlid), 1);
+                inliersrest(iCol) = 1;
+                inl_rest(okrow(inlid), iCol) = ones(length(inlid), 1);
                 nr_inliers = nr_inliers + length(inlid) - minimal_solver_nr_of_rows;
                 tot_err = tot_err + sum(err(inlid).^2); % I am adding the five zeros here, but nevermind.
             end

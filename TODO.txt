@@ -1,0 +1,111 @@
+== CODE REVIEW ==
+https://ieeexplore-ieee-org.ludwig.lub.lu.se/stamp/stamp.jsp?tp=&arnumber=9054025 
+Some variants of this TOA problem
+are (i) TDOA - if the receivers are synchronized, whereas the
+senders are unsynchronized [18–20]; (ii) (COTDOA) - constant offset time-difference-of-arrival [21]; and (iii) UTDOA
+- if neither senders nor receivers are calibrated [22].
+
+Is cotoa yet a variant, or should it be cotdoa?
+Will UTDOA also be in the code?
+What about unknown speed v? Varying over time? Freq dependent?
+
+upgrade401 never used. Is it done? tested?
+getsolvers_2d2d should use also 410 401?
+
+getSolvers - -make it generic. Need subfiles or rely on switch?
+Assumingly a long run will be in the same "type" domain. Is efficiency a concern?
+
+1D too?
+
+getOffsetSolvers?
+
+solver_toa_rankZ always zero. Make generic? Will there be more?
+
+txoa() never called.
+
+findLinearConstraints()
+can 9 be found from size of input? size of Hqp?
+is second :9 actually :end?
+
+findLinearConstraints_2D
+just a matter of stripping columns 3 5 6 from Ins and mult. (And the 9 of q)
+
+createRandomSample() is this generic already?
+
+extend_uavbo calls first extend ua and then vbo. vbo needs many rows to make any progress, so it will never win. With 5 initial rows, only one can provide inlier for the new column, e.g. max inliner count = 1. 
+Also note the default threshold of 3 is never reached, so should add that to the check in beginning and avoid the 500 tries. Actually, we should give the ua inlier count as new threshold.
+But changing this will affect the randomness, so even if it is a perfectly clean change, the results will likely change. 
+Less than 1 min_inlier is meaningless. max that opt. And exit early if the limit (rows-used) < min or is reached in search (unless also improving err is added).
+Is it valuable to find the best fit for each col (not only test err) or to add the columns in best order? Does the sequence order change things much, or is the err calculated last round relatively indicative of the best column to add next?
+
+
+generic
+
+Warning: Matrix is singular to working precision. 
+> In toa_trilateration_one_bundle (line 46)
+In misstdoa_reestimate_cols_rso (line 53)
+In main_script_for_calibration (line 122)
+
+Files:
+-rw-r--r-- 1 jens 197609  11K Jul 10 10:39 components/init_uvabo_ransac.m
+txoa but more config needed
+
+-rw-r--r-- 1 jens 197609 2.0K Jul  9 06:13 components/extend_uvabo_ransac.m
+-rw-r--r-- 1 jens 197609 3.0K Jul  9 10:00 components/extend_ua_ransac.m
+-rw-r--r-- 1 jens 197609 4.6K May  9 13:02 components/extend_vbo_ransac.m
+-rw-r--r-- 1 jens 197609  480 May  8 15:11 components/init_rso_random.m
+-rw-r--r-- 1 jens 197609  790 May  8 15:11 components/refine_Lq.m
+-rw-r--r-- 1 jens 197609 3.8K May 15 12:03 components/refine_rso.m
+-rw-r--r-- 1 jens 197609 4.2K May 15 12:07 components/refine_rso_robust.m
+-rw-r--r-- 1 jens 197609 7.1K Jul  1 08:06 components/refine_uvabo.m
+-rw-r--r-- 1 jens 197609 1.6K May  8 15:11 components/upgrade_linear.m
+-rw-r--r-- 1 jens 197609 5.5K Jul  1 12:43 components/upgrade_ransac.m
+-rw-r--r-- 1 jens 197609 161K May  8 15:11 data/data1.mat
+-rw-r--r-- 1 jens 197609  90K May  8 15:11 data/data2.mat
+-rw-r--r-- 1 jens 197609  88K May  8 15:11 data/data3.mat
+-rw-r--r-- 1 jens 197609 177K May  8 15:11 data/data4.mat
+-rw-r--r-- 1 jens 197609  50K May  8 15:11 data/data5.mat
+-rw-r--r-- 1 jens 197609 268K May  8 15:11 data/data6.mat
+-rw-r--r-- 1 jens 197609 228K May  8 15:11 data/data7.mat
+-rw-r--r-- 1 jens 197609 2.3K May 15 13:02 kalle_generalizations/generate_synthetic_txoa.m
+-rw-r--r-- 1 jens 197609 1.2K May  8 16:17 kalle_generalizations/test_synthetic_txoa.m
+-rw-r--r-- 1 jens 197609  12K Jul 10 07:49 kalle_generalizations/test_synthetic_txoa_pieces.m
+-rw-r--r-- 1 jens 197609 4.6K May  8 15:11 misc/bundletoa_calib.m
+-rw-r--r-- 1 jens 197609 1.3K Jul  2 16:22 misc/misstdoa_calc_z.m
+-rw-r--r-- 1 jens 197609 3.4K May  8 15:11 misc/misstdoa_jacres_v2_fixneg.m
+-rw-r--r-- 1 jens 197609 3.3K May  8 16:17 misc/misstdoa_jacres_v2_fixneg_rank2.m
+-rw-r--r-- 1 jens 197609 4.4K May 15 12:50 misc/misstdoa_reestimate_cols_rso.m
+-rw-r--r-- 1 jens 197609 2.4K May  8 15:11 misc/misstdoa_reestimate_rows_rso.m
+-rw-r--r-- 1 jens 197609 1.5K May  8 16:17 misc/misstdoa_update_v2.m
+-rw-r--r-- 1 jens 197609 1.5K May  8 16:17 misc/misstdoa_update_v2_rank2.m
+-rw-r--r-- 1 jens 197609  678 May  8 15:11 misc/tdoa_calc_u_from_xyo.m
+-rw-r--r-- 1 jens 197609 3.2K May  8 15:11 misc/tdoa_trilateration_y_one_bundle.m
+-rw-r--r-- 1 jens 197609 2.1K May  8 15:11 misc/tdoa_trilateration_y_one_point.m
+-rw-r--r-- 1 jens 197609 2.3K May  8 15:11 misc/tdoa_trilateration_y_one_ransac.m
+-rw-r--r-- 1 jens 197609 2.9K May  8 15:11 misc/toa_trilateration_one_bundle.m
+-rw-r--r-- 1 jens 197609 2.0K May  8 15:11 misc/toa_trilateration_one_point.m
+-rw-r--r-- 1 jens 197609 2.5K Jul  4 13:42 misc/toa_trilateration_one_ransac.m
+-rw-r--r-- 1 jens 197609 1.7K May  8 15:11 solvers/get_offset_solvers.m
+-rw-r--r-- 1 jens 197609 1.3K May 15 05:32 solvers/solver_cotoa_rank2_44.m
+-rw-r--r-- 1 jens 197609 2.9K May  8 16:17 solvers/solver_cotoa_rank3_55.m
+-rw-r--r-- 1 jens 197609  39K May  8 15:11 solvers/solver_tdoa_rank2_56.m
+-rw-r--r-- 1 jens 197609  520 May  8 15:11 solvers/solver_tdoa_rank2_74.m
+-rw-r--r-- 1 jens 197609 652K May  8 15:11 solvers/solver_tdoa_rank3_68.m
+-rw-r--r-- 1 jens 197609 238K May  8 15:11 solvers/solver_tdoa_rank3_76.m
+-rw-r--r-- 1 jens 197609  520 May  8 15:11 solvers/solver_tdoa_rank3_95.m
+-rw-r--r-- 1 jens 197609  254 May  8 16:17 solvers/solver_toa_rank2_43.m
+-rw-r--r-- 1 jens 197609  253 May  8 16:17 solvers/solver_toa_rank3_54.m
+-rw-r--r-- 1 jens 197609 3.2K May  8 15:11 systems/tdoa.m
+-rw-r--r-- 1 jens 197609 2.1K May  8 15:11 systems/tdoa_random.m
+-rw-r--r-- 1 jens 197609 3.4K May  8 16:17 systems/txoa.m
+-rw-r--r-- 1 jens 197609 1.4K May  8 15:11 tests/generate_synthetic_tdoa.m
+-rw-r--r-- 1 jens 197609 2.2K May  8 15:11 tests/plot_numerical_stability.m
+-rw-r--r-- 1 jens 197609 2.4K May 11 12:42 tests/test_real.m
+-rw-r--r-- 1 jens 197609  964 May  8 15:11 tests/test_synthetic.m
+-rw-r--r-- 1 jens 197609  614 May  8 15:11 util/cube.m
+-rw-r--r-- 1 jens 197609  464 May  8 15:11 util/kabsch.m
+-rw-r--r-- 1 jens 197609 3.3K Jul  3 20:36 util/misstdoa_brief_visualization.m
+-rw-r--r-- 1 jens 197609  738 May  8 16:17 util/misstdoa_briefer_report.m
+-rw-r--r-- 1 jens 197609 1.1K May  8 15:11 util/plot_tdoa_res.m
+-rw-r--r-- 1 jens 197609   92 May  8 15:11 util/relu.m
+-rw-r--r-- 1 jens 197609  600 May  8 15:11 util/toa_calc_d_from_xy.m

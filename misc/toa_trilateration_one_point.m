@@ -1,11 +1,13 @@
-function ysols=toa_trilateration_one_point(d,x);
+function ysols=toa_trilateration_one_point(d,x)
 % ysols=toa_trilateration_one_point(d,x);
 % does trilateration using a vector of distances d
 % assuming known positions x 
-% and calculates y so that 
+% and calculates y to match. 
+% Eg. find the position (y) of a sender, given 
+% distances (d) to each receiver (on positions x). 
 % Assumes column vectors d and x
-% Assumes minimal case, i e sizes of d and x equal
-% Gives the two solutions
+% Assumes minimal case, i.e. sizes of d and x equal
+% Gives the two possible solutions.
 
 [x_dim,m] = size(x);
 d_dim = size(d,1);
@@ -13,12 +15,12 @@ d_dim = size(d,1);
 % Assumes x_dim == m
 % Assumes d_dim == m
 
-if x_dim ~= d_dim,
+if x_dim ~= d_dim
   error('toa_trilateration_one_point only solves minimial case 1 size(x,1) = size(d,1)');
-end;
-if x_dim ~= m,
+end
+if x_dim ~= m
   error('toa_trilateration_one_point only solves minimial case 2 size(x,1) = size(x,2)');
-end;
+end
 
 %keyboard;
 
@@ -38,12 +40,11 @@ x20 = sum(x0.^2);
 % solve for lambda 
 % -2*(xbasis')*xbasis* lambda  = d2lin-(x2basis-x20) + 2*(xbasis')*x0;
 A = -2*(xbasis.')*xbasis;
-% There could be a problem here if the 
-% elements are complex. 
+% There could be a problem here if the elements are complex. 
 b = d2lin-(x2basis-x20)' + 2*(xbasis.')*x0;
 %b = d2lin-(x2basis-x20) + (xbasis.')*x0 + x0'*xbasis;
 
-if abs(det(A))> (10^(-8)),
+if abs(det(A)) > (10^(-8))
 lambda = A\b;
 
 y0 = x0 + xbasis*lambda;
@@ -56,10 +57,10 @@ xperp = null(xbasis');
 % 0 = (-d21 + x20 - 2*x0'*y0 + y0'*y0) + 
 %     (-2*x0'*xperp + 2*y0'*xperp)*my + 
 %     (xperp'*xperp)*my^2
-% By clever choice of solutions the linear term i zero
-% thus my = plus minus sqrt(
+% By clever choice of solutions the linear term is zero
+% thus my = plus minus sqrt()
 my = sqrt( - (-d21 + x20 - 2*x0.'*y0 + y0.'*y0) / (xperp.'*xperp) );
 ysols = [ (y0+xperp*my) (y0 -xperp*my)];
 else
-    ysols = rand(x_dim,2);
+    ysols = rand(x_dim,2); % TODO JAG: Why random inst of NaN?
 end
