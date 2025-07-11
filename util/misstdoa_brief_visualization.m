@@ -4,6 +4,11 @@ function stats = misstdoa_brief_visualization(sol)
 opt.threshold = 0.15; % TODO: Options
 opt.stdout = 2; % TODO: Options
 
+if ~isfield(sol,'rows') || ~isfield(sol,'cols')
+    [sol.rows, sol.cols] = size(sol.z);
+    sol.type = 'z';
+end
+
 [zcalc,zok] = misstdoa_calc_z(sol);
 zerr = zcalc(:)-sol.z(:);
 zinl = sol.inlmatrix(:);
@@ -17,17 +22,18 @@ sum(zok(:)) prod(size(sol.z)); ...
 norm(zerr) 0];
 DETMISS=1;
 DETIN=2;
-ZOK=4;
+NOK=4;
 STDOUT=8;
 OUTLIER=16;
 LAST=32;
+LEFTOUT=STDOUT+DETMISS;
 dist = abs(zcalc-sol.z);
 detin = sol.inlmatrix;
 detmiss = isnan(sol.z);
 plot_im = ...
     (detmiss)*DETMISS + ...       % missing data (black)
     (detin)*DETIN + ...         % true pos (green) - good
-    zok*ZOK + ...
+    ~zok*NOK + ...  % not evaluated
     (dist > std(zerr)*opt.stdout)*STDOUT + ...
     (dist > opt.threshold)*OUTLIER + ...
     0; % Last line
@@ -36,21 +42,28 @@ plot_im = ...
 
 %    (truein & ~detin)*2 + ... % false neg (orange) quite bad
 %    (trueout & ~detin)*4; % true neg (yellow) - good
+plot_im(plot_im == 0) = (dist(plot_im == 0) <= std(zerr)*opt.stdout)*(LEFTOUT);
+
 plot_colmap = [0 1 0;0.2 0.7 0.2; 1 0 0;0.9 1 0; 0 0 0]; % G DG R Y K
 plot_colmap = ones(LAST,3);
 plot_colmap(DETMISS,:) = [0 0 0]; % Black
+plot_colmap(DETMISS + NOK,:) = [0 0 0]; % Black
+plot_colmap(NOK,:) = [0.5 0.5 0.5]; % Gray
 plot_colmap(DETIN,:) = [0 1 0]; % Green
-plot_colmap(DETIN+ZOK,:) = [0 1 0]; % Green
 plot_colmap(DETIN+STDOUT,:) = [0.2 0.7 0.2]; % Dark green
-plot_colmap(DETIN+ZOK+STDOUT,:) = [0.2 0.7 0.2]; % Dark green
 plot_colmap(STDOUT,:) = [0.9 1 0]; % Yellow
+plot_colmap(NOK+STDOUT,:) = [0.9 1 0]; % Yellow
+plot_colmap(LEFTOUT,:) = [0.9 1 0]; % Yellow
 plot_colmap(DETIN+OUTLIER,:) = [1 0.5 0]; % Orange
 plot_colmap(DETIN+STDOUT+OUTLIER,:) = [1 0.5 0]; % Orange
-plot_colmap(DETIN+ZOK+OUTLIER,:) = [1 0.5 0]; % Orange
-plot_colmap(DETIN+ZOK+STDOUT+OUTLIER,:) = [1 0.5 0]; % Orange
+plot_colmap(DETIN+NOK,:) = [1 0.5 0]; % Orange
+plot_colmap(DETIN+NOK+STDOUT,:) = [1 0.5 0]; % Orange
+plot_colmap(DETIN+NOK+OUTLIER,:) = [1 0.5 0]; % Orange
+plot_colmap(DETIN+NOK+STDOUT+OUTLIER,:) = [1 0.5 0]; % Orange
+plot_colmap(NOK+OUTLIER,:) = [1 0 0]; % Red
+plot_colmap(NOK+STDOUT+OUTLIER,:) = [1 0 0]; % Red
 plot_colmap(STDOUT+OUTLIER,:) = [1 0 0]; % Red
 plot_colmap(OUTLIER,:) = [1 0 0]; % Red
-names = []
 
 %
 figure(1); clf; subplot(2,1,1);

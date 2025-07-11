@@ -1,20 +1,19 @@
 function [z, gt] = generate_synthetic_txoa(m, n, dims, type, sigma, miss_ratio, out_ratio, out_range)
-% GENERATE_SYNTHETIC_DATA Generate synthetic TxOA measurements
-%   [z, gt] = GENERATE_SYNTHETIC_DATA(m, n, dims) generates an m by n matrix
+% GENERATE_SYNTHETIC_TXOA Generate synthetic TxOA measurements
+%   [z, gt] = GENERATE_SYNTHETIC_TXOA(m, n, dims) generates an m by n matrix
 %       z of TxOA measurements between m receivers and n senders. The
 %       measurements satisfy z_ij = || r_i - s_j || + o_j, where r_i and
-%       s_j are receiver and senders positions embedded in a
-%       'dims'-dimensional space. gt is a struct containing ground truth data
-%       for z, r, s, o, and d = z-o.
-%       'dims' is a the number of dimensions (2 or 3) for positions or
-%         a two-dimensional array [r_dims s_dims] if different.
-%   [z, gt] = GENERATE_SYNTHETIC_DATA(m, n, dims, type, sigma, miss_ratio, out_ratio, out_range)
-%       TxOA data type (default 'tdoa') can be 'toa' or 'cotoa' instead.
+%       s_j are receiver and senders positions embedded in a 'dims'-dimensional space. 
+%       'dims' is the number of dimensions (2 or 3) for positions or
+%       a two-number array [r_dim s_dim], if different.
+%       gt is a struct containing ground truth data for z, r, s, o, and d = z-o.
+%   [z, gt] = GENERATE_SYNTHETIC_TXOA(m, n, dims, type, sigma, miss_ratio, out_ratio, out_range)
 %       Gaussian noise, missing data, and outliers are added to the
 %       measurements. The outliers are uniformly sampled from the interval
-%       out_range.
-% TODO JAG merge with generate_synthetic_tdoa and change name to data?
-% TODO JAG manage input
+%       out_range. Noise is present in both gt.z and in output z.
+%       The gt.gt_z field carries the accurate z in this case.
+%       TxOA type (default 'tdoa') can be 'toa' or 'cotoa' instead,
+%       and controls the offset o.
 
 if nargin < 4
     type = 'tdoa';
@@ -32,13 +31,13 @@ if nargin < 8
     out_range = [-2 6];
 end
 
-if isscalar(dims)
-    r_dim = dims;
-    s_dim = dims;
-else
-    r_dim = dims(1);
-    s_dim = dims(2);
+if ~isscalar(sigma)
+    error("Parameter sigma must be a number, perhaps call 'generate_synthetic_txoa' directly.");
 end
+
+r_dim = dims(1);
+s_dim = dims(end);
+
 if (~isnumeric(dims) || min(r_dim,s_dim) < 2)
     error("Illegal dims: [%s] ", join(string(dims)))
 end
@@ -68,12 +67,21 @@ gt.r = r;
 gt.s = s;
 gt.o = o;
 gt.d = d;
-gt.z = z;
-gt.inliers = ~missing & ~outliers;
+gt.gt_z = z;
+gt.inlmatrix = ~missing & ~outliers;
+% Make the struct a 'solution' struct
+gt.offset_type = type;
+gt.type = 'gt_rso';
+gt.rank = dims;
+gt.rows = 1:m;
+gt.cols = 1:n;
 
+%% Add the different types of noise.
 z = z + sigma * randn(m, n);
 z(missing) = nan;
 
 out_low = out_range(1);
 out_high = out_range(2);
 z(outliers) = (out_high - out_low) * rand(nnz(outliers), 1) + out_low;
+%% Keep the noise as z
+gt.z = z;

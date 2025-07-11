@@ -9,11 +9,16 @@ Is cotoa yet a variant, or should it be cotdoa?
 Will UTDOA also be in the code?
 What about unknown speed v? Varying over time? Freq dependent?
 
+(some) Known mics? Where can that go into the pipeline?
+
 upgrade401 never used. Is it done? tested?
 getsolvers_2d2d should use also 410 401?
 
 getSolvers - -make it generic. Need subfiles or rely on switch?
 Assumingly a long run will be in the same "type" domain. Is efficiency a concern?
+
+In test_synthetic_txoa_pieces
+sols = solver_cotoa_rank2_44(z(1:4,1:4)); %Denna fungerar inte än
 
 1D too?
 
@@ -47,6 +52,21 @@ In misstdoa_reestimate_cols_rso (line 53)
 In main_script_for_calibration (line 122)
 
 Files:
+
+ready for review
+-rw-r--r-- 1 jens 197609 2.3K May 15 13:02 kalle_generalizations/generate_synthetic_txoa.m
+-rw-r--r-- 1 jens 197609 1.4K May  8 15:11 tests/generate_synthetic_tdoa.m
+
+ongoing
+-rw-r--r-- 1 jens 197609 1.2K May  8 16:17 kalle_generalizations/test_synthetic_txoa.m
+-rw-r--r-- 1 jens 197609  12K Jul 10 07:49 kalle_generalizations/test_synthetic_txoa_pieces.m
+
+-rw-r--r-- 1 jens 197609 3.3K Jul  3 20:36 util/misstdoa_brief_visualization.m
+-rw-r--r-- 1 jens 197609 1.3K Jul  2 16:22 misc/misstdoa_calc_z.m
+-rw-r--r-- 1 jens 197609  738 May  8 16:17 util/misstdoa_briefer_report.m
+-rw-r--r-- 1 jens 197609 1.1K May  8 15:11 util/plot_tdoa_res.m
+
+
 -rw-r--r-- 1 jens 197609  11K Jul 10 10:39 components/init_uvabo_ransac.m
 txoa but more config needed
 
@@ -67,11 +87,7 @@ txoa but more config needed
 -rw-r--r-- 1 jens 197609  50K May  8 15:11 data/data5.mat
 -rw-r--r-- 1 jens 197609 268K May  8 15:11 data/data6.mat
 -rw-r--r-- 1 jens 197609 228K May  8 15:11 data/data7.mat
--rw-r--r-- 1 jens 197609 2.3K May 15 13:02 kalle_generalizations/generate_synthetic_txoa.m
--rw-r--r-- 1 jens 197609 1.2K May  8 16:17 kalle_generalizations/test_synthetic_txoa.m
--rw-r--r-- 1 jens 197609  12K Jul 10 07:49 kalle_generalizations/test_synthetic_txoa_pieces.m
 -rw-r--r-- 1 jens 197609 4.6K May  8 15:11 misc/bundletoa_calib.m
--rw-r--r-- 1 jens 197609 1.3K Jul  2 16:22 misc/misstdoa_calc_z.m
 -rw-r--r-- 1 jens 197609 3.4K May  8 15:11 misc/misstdoa_jacres_v2_fixneg.m
 -rw-r--r-- 1 jens 197609 3.3K May  8 16:17 misc/misstdoa_jacres_v2_fixneg_rank2.m
 -rw-r--r-- 1 jens 197609 4.4K May 15 12:50 misc/misstdoa_reestimate_cols_rso.m
@@ -98,14 +114,10 @@ txoa but more config needed
 -rw-r--r-- 1 jens 197609 3.2K May  8 15:11 systems/tdoa.m
 -rw-r--r-- 1 jens 197609 2.1K May  8 15:11 systems/tdoa_random.m
 -rw-r--r-- 1 jens 197609 3.4K May  8 16:17 systems/txoa.m
--rw-r--r-- 1 jens 197609 1.4K May  8 15:11 tests/generate_synthetic_tdoa.m
 -rw-r--r-- 1 jens 197609 2.2K May  8 15:11 tests/plot_numerical_stability.m
 -rw-r--r-- 1 jens 197609 2.4K May 11 12:42 tests/test_real.m
 -rw-r--r-- 1 jens 197609  964 May  8 15:11 tests/test_synthetic.m
 -rw-r--r-- 1 jens 197609  614 May  8 15:11 util/cube.m
 -rw-r--r-- 1 jens 197609  464 May  8 15:11 util/kabsch.m
--rw-r--r-- 1 jens 197609 3.3K Jul  3 20:36 util/misstdoa_brief_visualization.m
--rw-r--r-- 1 jens 197609  738 May  8 16:17 util/misstdoa_briefer_report.m
--rw-r--r-- 1 jens 197609 1.1K May  8 15:11 util/plot_tdoa_res.m
 -rw-r--r-- 1 jens 197609   92 May  8 15:11 util/relu.m
 -rw-r--r-- 1 jens 197609  600 May  8 15:11 util/toa_calc_d_from_xy.m

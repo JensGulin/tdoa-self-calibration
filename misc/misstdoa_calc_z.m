@@ -1,7 +1,6 @@
 function [zcalc,zok] = misstdoa_calc_z(sol)
 % MISSTDOA_CALC_Z
 
-z = sol.z;
 m = length(sol.rows);
 n = length(sol.cols);
 
@@ -11,25 +10,36 @@ switch lower(sol.type)
         % This is (kind of) -2* U'*V + a_i + b_j
         ok = tmp >= 0;
         neg = tmp < 0;
-        ztmp = sqrt(relu(tmp)) + repmat(sol.o,m,1);
+        tmp = sqrt(relu(tmp)) + repmat(sol.o,m,1);
         % This is sqrt( -2*U'*V + a_i + b_j ) + o
         %ztmp = ztmp.*ok;
         
         %utmp = sqrt(abs(sol.w*sol.v+ repmat(sol.c_anchor,1,n)+repmat(sol.d2_anchor,m,1)))+repmat(sol.o,m,1);
         
-        zcalc = nan(size(z));
-        zcalc(sol.rows,sol.cols) = ztmp;
+        zcalc = nan(size(sol.z));
+        zcalc(sol.rows,sol.cols) = tmp;
         
-        zok = zeros(size(z));
+        zok = false(size(sol.z));
         zok(sol.rows,sol.cols) = ok;
     case {'rso'}
-        z = sol.z;
-        
         tmp = toa_calc_d_from_xy(sol.r, sol.s);
-        ztmp = tmp + repmat(sol.o,m,1);
+        tmp = tmp + repmat(sol.o,m,1);
         
-        zcalc = nan(size(z));
-        zcalc(sol.rows,sol.cols) = ztmp;
+        zcalc = nan(size(sol.z));
+        zcalc(sol.rows,sol.cols) = tmp;
         zok = sol.inlmatrix;
-        
+        zok = false(size(sol.z)); % TODO: all better than inl?
+        zok(sol.rows,sol.cols) = true;
+    case {'gt_rso'} % Ground truth from generate_synthetic_txoa()
+        tmp = toa_calc_d_from_xy(sol.r, sol.s);
+        zcalc = tmp + repmat(sol.o,m,1);
+        zok = sol.inlmatrix;
+    case {'z'} % Pre-solution illustration
+    % TODO JAG Come up with a useful measure from z only?
+        zcalc = repmat(mean(sol.z,'omitmissing'),m,1);
+        zcalc = repmat(mean(sol.z,2,'omitmissing'),1,n);
+        zok = sol.inlmatrix;
+        %zok = sol.z;
+    otherwise
+        error("misstdoa_calc_z: Unknown sol type.");
 end
