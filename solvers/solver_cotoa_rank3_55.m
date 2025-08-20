@@ -1,19 +1,41 @@
-function [sols,coeffs] = tdoa_offset_55(a)
-%sols = tdoa_offset_55(a)
+function [sols,coeffs] = solver_cotoa_rank3_55(z)
+% SOLVER_COTOA_RANK3_55 Solve TxOA offsets for a specific case.
+%   sols = SOLVER_COTOA_RANK3_55(z) solves for the offset o, given the
+%       matrix of TxOA measurements z. The measurements are
+%       given by z_ij = || r_i - s_j || + o_j, where r_i and s_j are
+%       (unknown) receiver and senders positions. 
+% 
+%       COTOA means that there is a constant o_j = o for all j (and i).
+%       Rank 3 can handle up to 3D positions, but also 2D.
+%       There are multiple putative offsets given, approximations assuming
+%       small gaussian errors and no outliers.
 % Input: 
-%     a - This is a 5x5 matrix a with time-difference-of-arrival
-%         measurements
+%     z - 5x5 matrix with time-difference-of-arrival
+%         (COTOA) measurements of the true TOA d, affected by a 
+%         common offset o, i.e. z(i,j) = d(i,j) + o + e(i,j)
+%         where e may be a small additive normal noise.
+%         
 % Output:
-%     sols - 4x1 vector with the four possible offsets o
-%     so that a(i,j) - o produce a 5x5 matrix with 
-%     time-of-arrival measurements. 
+%     sols - 4x1 vector with all putative offsets o
+%         so that [z(i,j) - o] produce a matrix with 
+%         time-of-arrival measurements. 
 
-cl = [-ones(4,1) eye(4)];
-cr = [-ones(4,1) eye(4)]';
-c1 = cl*(a.^2)*cr;
-cx = cl*(2*a)*cr;
-%
-data = [c1(:);cx(:)];
+% From ICASSP 2019 "ROBUST SELF-CALIBRATION OF CONSTANT OFFSET
+%   TIME-DIFFERENCE-OF-ARRIVAL"
+% f(o) = det(C' * (z − o).^2 * C) = 0
+% In this case we only want o.
+% Expand (z-o).^2 as z.^2 -2z.*o + o.^2
+% and transform each term A into C'*A*C to get (see code)
+% Cz2C + C2zC .* o + 0
+% Note that while o is a matrix of same size as z here, it's actually
+% a constant distributed to all elements, thus C'(o.^2)C = 0
+% and the element-wise multiplication can be separated from C2zC.
+
+C = [-ones(1,4) ; eye(4)];
+Cz2C = C'*(z.^2)*C;
+C2zC = C'*(2*z)*C; % Should be -, but get coeffs for -o and then -roots.
+% Setting up a template that uses 
+data = [Cz2C(:);C2zC(:)];
 ids1 = [ ...
 1 , 1 , 17 , 17 , 3 , 3 , 19 , 19 , 1 , 1 , 17 , 17 , 2 , 2 , 18 , 18 , 1 , 1 , 17 , 17 , 2 , 2 , 18 , 18 ; ...
 6 , 22 , 6 , 22 , 8 , 24 , 8 , 24 , 7 , 23 , 7 , 23 , 8 , 24 , 8 , 24 , 8 , 24 , 8 , 24 , 7 , 23 , 7 , 23 ; ...
@@ -39,4 +61,3 @@ sols = -roots(CC2*prod3);
 coeffs = CC2*prod3;
 
 sols = ones(5,1)*sols';
-

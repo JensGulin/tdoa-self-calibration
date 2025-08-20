@@ -87,7 +87,7 @@ disp("This may fail: solver_tdoa_rank2_56, not all close enough")
 sols = solver_tdoa_rank2_56(z(1:5,1:6));
 check_offset_vector(sols,gt.o(1:6)','tol',1e-3);
 
-sols = solver_cotoa_rank2_44(z(1:4,1:4)); %Denna fungerar inte än
+sols = solver_cotoa_rank2_44(z(1:4,1:4));
 check_offset_vector(sols,gt.o(1:4)');
 
 % Can reuse rank5 solvers too!
@@ -139,7 +139,6 @@ check_offset_vector(sols,gt.o(1:4)');
 sols = solver_tdoa_rank2_56(z(1:5,1:6));
 check_offset_vector(sols,gt.o(1:6)');
 
-warning("This will fail: solver_cotoa_rank2_44 on TOA")
 sols = solver_cotoa_rank2_44(z(1:4,1:4));
 check_offset_vector(sols,gt.o(1:4)');
 
@@ -259,7 +258,7 @@ out_ratio = 0.00;
 % Test pieces
 
 % Default solver.
-asolver.solv = @solver_cotoa_rank2_44; % TODO JAG: This is not working yet??
+asolver.solv = @solver_cotoa_rank2_44;
 asolver.name = func2str(asolver.solv);
 asolver.m = 4;
 asolver.n = 4;
