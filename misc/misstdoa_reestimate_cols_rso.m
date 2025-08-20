@@ -80,7 +80,7 @@ for jj = 1:size(z,2)
     tmp = find(sol.cols == jj);
     if length(tmp) < 1,
         % No previous estimate of this column
-        tmp = size(sol.s, 2) + 1;
+        tmp = size(sol.cols, 2) + 1;
         sol.s(:, tmp) = sny;
         sol.o(:, tmp) = ony;
         sol.cols(tmp) = jj;

@@ -8,21 +8,6 @@ out_ratio = 0.00;
 
 [z, gt] = generate_synthetic_txoa(m, n, dim, 'tdoa', sigma, miss_ratio, out_ratio);
 
-%% Test pieces
-
-sols = solver_tdoa_rank3_95(z(1:9,1:5));
-[sols gt.o(1:5)']
-
-sols = solver_tdoa_rank3_76(z(1:7,1:6));
-[sols gt.o(1:6)']
-
-sols = solver_tdoa_rank3_68(z(1:6,1:8));
-[sols gt.o(1:8)']
-
-
-
-
-
 %% Run system.
 [r, s, o, sol] = tdoa(z, 'display', 'iter', 'sigma', max(sigma, 1e-6));
 % [r, s, o, sol] = tdoa_random(z, 'display', 'off', 'sigma', max(sigma, 1e-6), 'inits', 10);

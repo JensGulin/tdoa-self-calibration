@@ -168,9 +168,9 @@ for iRansac = 1:opts.iters
             switch opts.offset_type
                 case 'tdoa'
                     % In this case we need to get ony as well.
-                    % Expand (z-ony).^2 as z^2 -2z*ony + ony^2
+                    % Expand (z-ony).^2 as z.^2 -2z.*ony + ony.^2
                     % and rearrange to
-                    % -2u*vny -1*ony^2 + 2z*ony + 1*bny == z^2 - a
+                    % -2u*[vny] -1*[ony.^2] + 2z*[ony] + 1*[bny] == z.^2 - a
                     AAA = [(-2*u_cut), -ones(minimal_solver_nr_of_rows, 1),... 
                         2*z_cut, ones(minimal_solver_nr_of_rows, 1)];
                     bbb = z_cut.^2 - a_cut;

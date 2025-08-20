@@ -54,7 +54,7 @@ switch type
     case 'cotoa'
         o = ones(1, n)*randn(1,1);
     otherwise
-        error("Illegal type '%s'.",type)
+        error("Illegal type '%s', use 'tdoa', 'cotoa' or 'toa'.",type)
 end
 
 d = pdist2(r', s');
