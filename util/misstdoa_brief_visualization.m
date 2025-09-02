@@ -1,9 +1,51 @@
-function stats = misstdoa_brief_visualization(sol)
-% MISSTDOA_BRIEF_VISUALIZATION Plot status report for current solution
+function stats = misstdoa_brief_visualization(sol, varargin)
+% MISSTDOA_BRIEF_VISUALIZATION Plots status report for a solution
+%  That is, the solution is reprojected to TxOA and compared with given z.
+%  1. The first part shows the (color coded) status of each z separately.
+%  The stats shows the number of processed columns (C, mics)
+%  and rows (R, events). I is the number of inliers, P the processed z
+%  (C*R). The error E is total squared error (Note: not mean) and std the
+%  error standard deviation (not squared). The error only includes the inliers.
+%  2. Second part is the histogram of inlier errors, with additional
+%  measurements shown if they are in view (e.g. true inliers falsely marked
+%  as outliers).
+%  The stats here are the same E and std as before, but (somehow) scaled.
+%  In addition the (unscaled) mean error (not squared) indicates any bias.
+%  3. The color coding is the same in both parts, with legend given in the
+%  second part. The distinction of a true outlier (TN) and a false outlier
+%  (FN) is the 'threshold' option. The separation of true inliers (TP) and
+%  questionable inliers (?P) is controlled by the 'stdin' option.
+% 
+%  stats = MISSTDOA_BRIEF_VISUALIZATION(sol)
+%  stats = MISSTDOA_BRIEF_VISUALIZATION(sol, varargin)
+% Input:
+%  * sol: The solution struct (in e.g. rso or uvabo form).
+%  * varargin: Optional options. It can be a mixture of 
+%    positional (unnamed) parameters in the order below, a struct
+%    with named fields, or ('name', value) parameters. If the same
+%    parameter is given several times, the last one wins. Positional
+%    parameters must come before any others and do not accept strings,
+%    use string array or cell array for the positional title. 
+% Options:
+%  * fig: [int] The figure number. Def. 1.
+%  * threshold: [double] The error accepted for a true inlier. Def. 0.15.
+%  * stdin: [double] The error expected for a true inlier, in terms of
+%    number of std deviations from zero. Def. 2.
+%  * title: [string] Figure title. Can be several lines if string array.
+%    Uses ('Interpreter', 'none'), but all properties can be changed by
+%    submitting a cell array, e.g. {"title",'FontSize',10}. Def. "".
+% Output:
+%  * stats: An array of (5,2) size with various numbers.
 
-opt.threshold = 0.01; % TODO: Options
-opt.threshold = 0.15; % TODO: Options
-opt.stdout = 2; % TODO: Options
+% Parse inputs.
+p = inputParser;
+% p.KeepUnmatched = true; % No error for unknown
+addOptional(p, 'fig', 1);
+addOptional(p, 'threshold', 0.15);
+addOptional(p, 'stdin', 2);
+addOptional(p, 'title', "");
+parse(p, varargin{:});
+opts = p.Results;
 
 if ~isfield(sol,'rows') || ~isfield(sol,'cols')
     [sol.rows, sol.cols] = size(sol.z);
@@ -35,10 +77,10 @@ plot_im = ...
     (detmiss)*DETMISS + ...       % missing data (black)
     (detin)*DETIN + ...         % true pos (green) - good
     ~zok*NOK + ...  % not evaluated
-    (dist > std(zerr)*opt.stdout)*STDOUT + ...
-    (dist > opt.threshold)*OUTLIER + ...
+    (dist > std(zerr)*opts.stdin)*STDOUT + ...
+    (dist > opts.threshold)*OUTLIER + ...
     0; % Last line
-plot_im(plot_im == 0) = (dist(plot_im == 0) <= std(zerr)*opt.stdout)*(LEFTOUT);
+plot_im(plot_im == 0) = (dist(plot_im == 0) <= std(zerr)*opts.stdin)*(LEFTOUT);
 
 plot_colmap = [0 1 0;0.2 0.7 0.2; 1 0 0;0.9 1 0; 0 0 0]; % G DG R Y K
 plot_colmap = ones(LAST,3); % White
@@ -85,7 +127,13 @@ plot_colname(OUTLIER,:) = 6; % Red
 
 
 %
-figure(1); clf; subplot(2,1,1);
+figure(opts.fig); clf;
+if (isstring(opts.title) || ischar(opts.title)) && all(opts.title ~= "")
+    sgtitle(opts.title, 'Interpreter', 'none');
+elseif iscell(opts.title)
+    sgtitle(opts.title{:});
+end
+subplot(2,1,1);
 plot_im(plot_im < 1) = LAST - plot_im(plot_im < 1);
 image(plot_im);
 colormap(plot_colmap);
@@ -94,14 +142,19 @@ title(['R:' num2str(length(sol.rows)) '/' num2str(size(sol.z,1)) ...
     ' I:' num2str(sum(sol.inlmatrix(:))) '/' num2str(numel(sol.z)) ...
     ' P:' num2str(sum(zok(:))) '/' num2str(numel(sol.z))  ...
     ' E: ' num2str(norm(zerr)) ' std ' num2str(std(zerr))]);
+
+%%
 subplot(2,1,2);
-h = histogram(zerr,100);
+% Make a first plot to get h.BinEdges
+h = histogram(zerr_all,1000);
+%h = histogram(zerr,100);
 
 cname = {"white: unknown", "green: inlier (ok, TP)", "dark: inlier (tail, ?P)", "yellow: inlier (excluded, FN)","orange: bad (included, FP)","red: outlier (excluded, TN)","black: missing (excluded)", "gray: unused (excluded, ??)"};
 %plot_im = plot_im(zinl); % TODO: Do we want to keep only inliers?
 
 labels = {};
 [m] = unique(plot_im);
+counts = zeros(size(m,1),size(h.BinEdges,2)-1);
 for n = 1:size(m,1)
     k = m(n);
     counts(n,:) = histcounts(zerr_all(plot_im==k), h.BinEdges);
