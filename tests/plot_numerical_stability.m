@@ -1,15 +1,23 @@
-% Visualize the numerical stability of all solvers by plotting the
+% Visualize the numerical stability of all offset solvers by plotting the
 % residuals when providing noiseless data.
 
 %% Initialization.
 iters = 10000;
+imag_filter = 1e-6;
+type = "cotoa";
+do_center = true;
+fig = 3;
+type = "tdoa";
+do_center = false;
+fig = 1;
 
 %% Define solvers.
-solvers = get_offset_solvers();
+solvers = get_offset_solvers('type',type);
 
 %% Run tests.
 % Disable warnings when measuring execution time. This is restored below.
 w = warning('off','all');
+center = 0;
 
 ress = nan(length(solvers), iters);
 exectime = zeros(1, length(solvers));
@@ -28,17 +36,28 @@ for isolv = 1:length(solvers)
         r = randn(dim, m);
         s = randn(dim, n);
         o = randn(1, n);
+        switch type 
+            case "cotoa"
+                o(:) = o(1);
+            case "toa"
+                o(:) = 0;
+        end
 
         d = pdist2(r', s');
         z = d + o;
 
+        if do_center
+            center = mean(z,'all');
+            z = z - center;
+        end
+
         % Run solver and measure execution time.
         tstart = tic();
-        oest = solver.solv(z);
+        oest = solver.solv(z) + center;
         totaltime = totaltime + toc(tstart);
 
         % Remove complex solutions.
-        oest = real(oest(:, all(abs(imag(oest)) < 1e-6)));
+        oest = real(oest(:, all(abs(imag(oest)) <= imag_filter)));
 
         if isempty(oest)
             continue;
@@ -54,7 +73,7 @@ end
 warning(w);
 
 %% Plot numerical stability.
-figure(1);
+figure(fig);
 edges = -16:0.25:0;
 centers = edges(1:end-1) + diff(edges) / 2;
 for isolv = 1:length(solvers)
@@ -76,7 +95,7 @@ set(gca, 'FontName', 'Times');
 set(gca, 'FontSize', 12);
 
 %% Plot execution time.
-figure(2);
+figure(fig+1);
 bp = bar(1000*exectime, 'FaceColor', 'flat');
 bp.CData = lines(length(solvers));
 ylabel('Execution time [ms]');
@@ -87,4 +106,3 @@ title('Execution time');
 
 fprintf('Execution times (microseconds):\n');
 fprintf('%5.0f\n', 1e6*exectime);
-

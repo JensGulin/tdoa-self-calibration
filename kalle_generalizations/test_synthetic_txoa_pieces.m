@@ -90,7 +90,7 @@ check_offset_vector(sols,gt.o(1:6)','tol',1e-3);
 sols = solver_cotoa_rank2_44(z(1:4,1:4));
 check_offset_vector(sols,gt.o(1:4)');
 
-% Can reuse rank5 solvers too!
+% Can reuse rank3 solvers too!
 sols = solver_cotoa_rank3_55(z(1:5,1:5));
 check_offset_vector(sols,gt.o(1:5)');
 
@@ -163,11 +163,7 @@ out_ratio = 0.01;
 % Test pieces
 
 % Default solver.
-asolver.solv = @solver_tdoa_rank3_95;
-asolver.name = func2str(asolver.solv);
-asolver.m = 9;
-asolver.n = 5;
-asolver.rank = 3;
+asolver = get_offset_solver_func(@solver_tdoa_rank3_95);
 
 [bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, 'offset_type','tdoa','solver',asolver,'display','iter','rank',3,'iters',1000);
 check_offset_vector(bestsol,gt);
@@ -193,11 +189,7 @@ out_ratio = 0.00;
 % Test pieces
 
 % Default solver.
-asolver.solv = @solver_tdoa_rank2_74;
-asolver.name = func2str(asolver.solv);
-asolver.m = 7;
-asolver.n = 4;
-asolver.rank = 2;
+asolver = get_offset_solver_func(@solver_tdoa_rank2_74);
 
 [bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, 'offset_type','tdoa','solver',asolver,'display','iter','rank',2,'iters',1000);
 check_offset_vector(bestsol,gt);
@@ -224,11 +216,7 @@ out_ratio = 0.00;
 % Test pieces
 
 % Default solver.
-asolver.solv = @solver_cotoa_rank3_55;
-asolver.name = func2str(asolver.solv);
-asolver.m = 5;
-asolver.n = 5;
-asolver.rank = 3;
+asolver = get_offset_solver_func(@solver_cotoa_rank3_55);
 
 [bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, 'offset_type','cotoa','solver',asolver,'display','iter','rank',3,'iters',1000);
 check_offset_vector(bestsol,gt);
@@ -258,11 +246,7 @@ out_ratio = 0.00;
 % Test pieces
 
 % Default solver.
-asolver.solv = @solver_cotoa_rank2_44;
-asolver.name = func2str(asolver.solv);
-asolver.m = 4;
-asolver.n = 4;
-asolver.rank = 2;
+asolver = get_offset_solver_func(@solver_cotoa_rank2_44);
 
 [bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, 'offset_type','cotoa','solver',asolver,'display','iter','rank',2,'iters',1000);
 check_offset_vector(bestsol,gt);
@@ -287,11 +271,7 @@ out_ratio = 0.00;
 % Test pieces
 
 % Default solver.
-asolver.solv = @solver_toa_rank3_54;
-asolver.name = func2str(asolver.solv);
-asolver.m = 5;
-asolver.n = 4;
-asolver.rank = 3;
+asolver = get_offset_solver_func(@solver_toa_rank3_54);
 
 [bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, 'offset_type','toa','solver',asolver,'display','iter','rank',3,'iters',1000);
 [sol, res, jac] = refine_uvabo(bestsol,'display','iter');
@@ -316,11 +296,7 @@ out_ratio = 0.00;
 % Test pieces
 
 % Default solver.
-asolver.solv = @solver_toa_rank2_43;
-asolver.name = func2str(asolver.solv);
-asolver.m = 4;
-asolver.n = 3;
-asolver.rank = 2;
+asolver = get_offset_solver_func(@solver_toa_rank2_43);
 
 [bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, 'offset_type','toa','solver',asolver,'display','iter','rank',2,'iters',1000);
 [sol, res, jac] = refine_uvabo(bestsol,'display','iter');
@@ -361,12 +337,7 @@ out_ratio = 0.00;
 % Test pieces
 
 % Default solver.
-asolver.solv = @solver_tdoa_rank3_95;
-asolver.name = func2str(asolver.solv);
-asolver.m = 9;
-asolver.n = 5;
-asolver.rank = 3;
-
+asolver = get_offset_solver_func(@solver_tdoa_rank3_95);
 
 [bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, 'offset_type','tdoa','solver',asolver,'display','iter','rank',3,'iters',1000);
 [sol, res, jac] = refine_uvabo(bestsol,'display','iter');
@@ -391,11 +362,7 @@ out_ratio = 0.00;
 % Test pieces
 
 % Default solver.
-asolver.solv = @solver_tdoa_rank2_74;
-asolver.name = func2str(asolver.solv);
-asolver.m = 7;
-asolver.n = 4;
-asolver.rank = 2;
+asolver = get_offset_solver_func(@solver_tdoa_rank2_74);
 
 [bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, 'offset_type','tdoa','solver',asolver,'display','iter','rank',2,'iters',1000);
 [sol, res, jac] = refine_uvabo(bestsol,'display','iter');
@@ -420,11 +387,7 @@ out_ratio = 0.00;
 % Test pieces
 
 % Default solver.
-asolver.solv = @solver_tdoa_rank2_74;
-asolver.name = func2str(asolver.solv);
-asolver.m = 7;
-asolver.n = 4;
-asolver.rank = 2;
+asolver = get_offset_solver_func(@solver_tdoa_rank2_74);
 
 [bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, 'offset_type','tdoa','solver',asolver,'display','iter','rank',dim,'iters',1000);
 [sol, res, jac] = refine_uvabo(bestsol,'display','iter');
@@ -449,7 +412,7 @@ out_ratio = 0.00;
 % Test pieces
 
 % Default solver.
-asolver.solv = @solver_tdoa_rank2_74;
+asolver = get_offset_solver_func(@solver_tdoa_rank2_74);
 asolver.name = func2str(asolver.solv);
 asolver.m = 7;
 asolver.n = 4;

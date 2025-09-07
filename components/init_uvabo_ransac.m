@@ -220,7 +220,7 @@ for iRansac = 1:opts.iters
         stats2(1, stats2_counter) = iRansac;
         stats2(2, stats2_counter) = nr_inliers;
         stats2(3, stats2_counter) = tot_err;
-        %stats2(4,stats2_counter)=otmp;
+        stats2(4,stats2_counter)=osol(1);
 
         if (nr_inliers > max_inliers) || ((nr_inliers == max_inliers) && (tot_err < best_err))
             if strcmpi(opts.display, 'iter')

@@ -2,8 +2,12 @@
 % "upgrade each suggested o" ransac
 
 %% Set up the data if needed
+% Choose the case you want below.
+type = "cotoa";
+do_permutaions = true;  % Compare all permutations of a single input (numeric stability)
+do_permutaions = false; % Take different input squares from a larger one
 
-%% CASE 3 - Generate synthetic data. COTOA RANK 3
+%% CASE 3 - Generate CLEANISH synthetic data. COTOA RANK 3
 m = 15;
 n = 30;
 dim = 3;
@@ -11,30 +15,31 @@ sigma = 1e-8;
 miss_ratio = 0.00;
 out_ratio = 0.00;
 
-[z, gt] = generate_synthetic_txoa(m, n, dim, 'cotoa', sigma, miss_ratio, out_ratio);
+[z, gt] = generate_synthetic_txoa(m, n, dim, type, sigma, miss_ratio, out_ratio);
 
-%% CASE 3b - Generate synthetic data. COTOA RANK 3
+%% CASE 3b - Generate NOISY synthetic data. COTOA RANK 3
 m = 15;
 n = 30;
 dim = 3;
-sigma = 1e-3;
+sigma = 1e-3; % NOTE: This is rather high
 miss_ratio = 0.00;
 out_ratio = 0.00;
 
-[z, gt] = generate_synthetic_txoa(m, n, dim, 'cotoa', sigma, miss_ratio, out_ratio);
+[z, gt] = generate_synthetic_txoa(m, n, dim, type, sigma, miss_ratio, out_ratio);
 
-%% CASE 3c - Generate synthetic data. COTOA RANK 3
+%% CASE 3c - Generate OUTLIER synthetic data. COTOA RANK 3
 m = 15;
 n = 30;
 dim = 3;
 sigma = 1e-3;
 miss_ratio = 0.00;
 out_ratio = 0.30;
+out_range = [-1 1]*0.5;
 
-[z, gt] = generate_synthetic_txoa(m, n, dim, 'cotoa', sigma, miss_ratio, out_ratio);
+[z, gt] = generate_synthetic_txoa(m, n, dim, type, sigma, miss_ratio, out_ratio, out_range);
 
 
-%% CASE 4 - Generate synthetic data. COTOA RANK 2
+%% CASE 4 - Generate CLEAN synthetic data. COTOA RANK 2
 m = 15;
 n = 30;
 dim = 2;
@@ -43,58 +48,31 @@ sigma = 1e-5;
 miss_ratio = 0.00;
 out_ratio = 0.00;
 
-[z, gt] = generate_synthetic_txoa(m, n, dim, 'cotoa', sigma, miss_ratio, out_ratio);
+[z, gt] = generate_synthetic_txoa(m, n, dim, type, sigma, miss_ratio, out_ratio);
 
-
+%%
 
 %%%%%%%
-%%%%%%% Choose the synthetic case to try
+%%%%%%% Choose the combinatorics to try
 %%%%%%% 
-%% from z, rank 3, find all o from first 5 ch and 5 events, all permutations, no voting, only gathering o
-mx = 5; % choose (solver square)
-nx = mx;
-fx = 5; % from
-sx = mx - 1; % solutions with this solver
-thisSolver = struct();
-thisSolver.fun = @solver_cotoa_rank3_55;
-C = perms(1:mx);
-%% from z, rank 3, find all o from first 10 ch and events, no voting, only gathering o
-mx = 5; % choose (solver square)
-nx = mx;
-fx = 10; % from
-sx = mx - 1; % solutions with this solver
 
-thisSolver = struct();
-thisSolver.fun = @solver_cotoa_rank3_55;
-C = nchoosek(1:fx,mx);
+mx = dim + 2; % choose (solver square)
+nx = mx;
+sx = mx - 1; % solutions with this solver
+thisSolver = get_offset_solvers(dim,mx,nx, type);
 
-%% from z, rank 2, find all o from first 5 ch and 5 events, all permutations, no voting, only gathering o
-mx = 4; % choose (solver square)
-nx = mx;
-fx = 4; % from
-sx = mx - 1; % solutions with this solver
-thisSolver = struct();
-thisSolver.fun = @solver_cotoa_rank2_44;
-C = perms(1:mx);
-%% from z, rank 2, find all o from first 10 ch and events, no voting, only gathering o
-mx = 4; % choose (solver square)
-nx = mx;
-fx = 10; % from
-sx = mx - 1; % solutions with this solver
-thisSolver = struct();
-thisSolver.fun = @solver_cotoa_rank2_44;
-C = nchoosek(1:fx,mx);
-%% from z, rank 2, find o from random 10 ch and events, no voting, only gathering o
-mx = 4; % choose (solver square)
-nx = mx;
-fx = 10; % from
-sx = mx - 1; % solutions with this solver
-thisSolver = struct();
-thisSolver.fun = @solver_cotoa_rank2_44;
-C = nchoosek(1:fx,mx);
-assert(false)
+if do_permutaions
+    fx = mx; % all permutations from only the small square
+    C = perms(1:mx);
+else
+    fx = 10; % sample from a larger square
+    C = nchoosek(1:fx,mx);
+end
+
 
 %% Now run for the given C
+% from z, assuming rank, find all o (no voting, only gathering o)
+% sampling minimal [mx,nx] input from first fx ch and fx events.
 do_center = true;
 do_center = false;
 center = 0;
@@ -114,7 +92,7 @@ for n=1:o1
         center = mean(zx,'all');
         zx = zx - center;
     end
-    [allsols] = thisSolver.fun(zx);
+    [allsols] = thisSolver.solv(zx);
     if size(allsols,2) == 0
         continue; 
     end
@@ -134,7 +112,7 @@ size(jag)
 jag = jag(:,abs(jag(1,:)) < 120);
 %oo = sort(,2);
 size(jag)
-fprintf("Took %f s\n", t)
+fprintf("Took %f s (%i/%i) avg %1e ms\n", t, j,o1, 1000*t/j);
 
 %% Show first histogram
 figure(216);
@@ -167,7 +145,7 @@ end
 %% Decide which peak to study
 j2 = floor(mean(b(end-1:end)))
 j2 = b(end-1)
-j2 = b(end-2)
+j2 = b(end-3)
 j2 = b(end)
 h.Values(j2)
 j1 = h.BinEdges(j2);
@@ -222,16 +200,23 @@ for i = 1:size(oo,2)
 end
 figure(317);clf;
 imagesc(good(1:fx,1:fx));
-title("Detailed count of good hits")
+title("Detailed count of good hits");
 colorbar();
 
-%%
+%% z err as colormap
 figure(318);clf;
 zx = z(1:fx,1:fx);
 x = zx - gt.gt_z(1:fx,1:fx);
 x = abs(x);
 imagesc(x);
-title("err as colormap")
+title("z err as colormap (GT indication of inliers)");
+colorbar();
+
+%% gt.inl as colormap
+figure(319);clf;
+x = gt.inlmatrix(1:fx,1:fx);
+imagesc(x);
+title("gt.inl as colormap (GT inliers = 1)");
 colorbar();
 
 %% TODO; Just a save if you want to track this gt again
@@ -260,9 +245,13 @@ i = sum(l,1);
 figure(300)
 subplot(1,2,1);
 histogram(i);
+title("All real");
+xlabel("Solutions from minsolver");
 subplot(1,2,2);
 i = sum(l2,1);
 histogram(i);
+title(sprintf("Filtered [%f,%f]",o_low,o_hi));
+xlabel("Solutions from minsolver");
 
 %%
 for j = 0:sx
@@ -313,3 +302,22 @@ end
     %x = sort(x); % sort each group
     x = x(:,1:1200);
     plot(x','.','MarkerSize',2);
+    title("Solution groups directly layers wrong solutions away from correct?")
+
+%% Is RANSAC doing a better job on this data?
+iters = 10000;
+tic;
+[bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, 'offset_type',type,'solver',asolver,'display','iter','rank',asolver.rank,'iters',iters);
+t2 = toc;
+fprintf("Stopped after %f s\n", t2)
+check_offset_vector(bestsol,gt,'tol',Inf);
+
+[a,b] = min(abs(stats2(4,:) - gt.o(1)));
+fprintf('Closest %5d: inliers = %3d, loss = %e (o=%e, bias=%e, qual=%f)\n', stats2([1,2,3,4],b),a, stats2(2,b) - stats2(3,b));
+
+% TODO: This strength value is perhaps better than current selection. 
+% It doesn't take "one more inlier" if the loss is bad, but if loss is < 1,
+% it is equivalent.
+[a,b] = max(stats2(2,:) - stats2(3,:));
+fprintf('Stg-est %5d: inliers = %3d, loss = %e (o=%e, bias=%e, qual=%f)\n', ...
+    stats2([1,2,3,4],b), abs(stats2(4,b) - gt.o(1)), a);
