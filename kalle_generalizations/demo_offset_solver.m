@@ -59,7 +59,7 @@ out_ratio = 0.00;
 mx = dim + 2; % choose (solver square)
 nx = mx;
 sx = mx - 1; % solutions with this solver
-thisSolver = get_offset_solvers(dim,mx,nx, type);
+oSolver = get_offset_solvers(dim,mx,nx, type);
 
 if do_permutaions
     fx = mx; % all permutations from only the small square
@@ -92,7 +92,7 @@ for n=1:o1
         center = mean(zx,'all');
         zx = zx - center;
     end
-    [allsols] = thisSolver.solv(zx);
+    [allsols] = oSolver.solv(zx);
     if size(allsols,2) == 0
         continue; 
     end
@@ -102,7 +102,7 @@ for n=1:o1
 end % n
 end % j
 t = toc;
-fprintf("Stopped after %f s\n", t)
+fprintf("Done after %f s\n", t)
 size(jag)
 jag(2+mx:end,:) = jag(2+mx:end,:) + 50;
 allsols = jag;
@@ -307,9 +307,9 @@ end
 %% Is RANSAC doing a better job on this data?
 iters = 10000;
 tic;
-[bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, 'offset_type',type,'solver',asolver,'display','iter','rank',asolver.rank,'iters',iters);
+[bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, 'offset_type',type,'solver',oSolver,'display','iter','rank',oSolver.rank,'iters',iters);
 t2 = toc;
-fprintf("Stopped after %f s\n", t2)
+fprintf("Done after %f s\n", t2)
 check_offset_vector(bestsol,gt,'tol',Inf);
 
 [a,b] = min(abs(stats2(4,:) - gt.o(1)));

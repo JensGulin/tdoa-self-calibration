@@ -31,8 +31,12 @@ ext_opts.threshold = opts.threshold;
 
 extended = 1;
 while extended
-    [sol1, count1] = extend_ua_ransac(sol, ext_opts);
-    [sol2, count2] = extend_vbo_ransac(sol, ext_opts);
+    % Try both and greedily take the one with most inliers.
+    % In general, they will alternate, if there's a big size diff,
+    % that will benefit the other in terms of "possible inliers".
+    % TODO: Make them fail early if the other raised the bar too high.
+    [sol1, count1] = extend_ua_ransac(sol, ext_opts);  % new row
+    [sol2, count2] = extend_vbo_ransac(sol, ext_opts); % new col
 
     if count1 == 0 && count2 == 0
         extended = 0;

@@ -54,22 +54,17 @@ stats2_counter = 0;
 % The problem type defines how much data is needed,
 % based on how many unknowns there are.
 % Typically 4-6 depending on rank and offset_type.
-% Additional data is needed to verify the minimal solution,
+% Note: Additional data is needed to verify the minimal solution,
 % so we usually count inliers excluding the data used by the solver.
 switch opts.offset_type
     case 'tdoa'
-        need_at_least_rows = opts.rank+3;
-        minimal_solver_nr_of_rows = need_at_least_rows-1;
-    case 'cotoa'
-        need_at_least_rows = opts.rank+2;
-        minimal_solver_nr_of_rows = need_at_least_rows-1;
-    case 'toa'
-        need_at_least_rows = opts.rank+2;
-        minimal_solver_nr_of_rows = need_at_least_rows-1;
+        minsolver_nr_rows = opts.rank + 2;
+    case {'toa','cotoa'}
+        minsolver_nr_rows = opts.rank + 1;
 end
 % TODO: Reconsider this. Suppose the criteria is > minimal for
 % verification and the value is dictated by the solver. If the solver is
-% smaller than need_at_least_rows-1 it should be discarded, right?
+% smaller than minsolver_nr_rows it should be discarded, right?
 
 
 for iRansac = 1:opts.iters
@@ -132,16 +127,16 @@ for iRansac = 1:opts.iters
         b = wr' * dsol2;
 
         % The following should now hold:
-        % dsol.^2 = (zsol-osol).^2 = -2*(u*v)+a+b
+        % dsol.^2 = (zsol-osol).^2 == -2*(u*v)+a+b
 
-        % TODO: Clean up code below and extract function.
+        % TODO: Clean up code below and extract function. There is overlap
+        % with extend_vbo_ransac, but otherwise fine to keep in here?
 
-        % Now check for inliers among the rest of the cols??
-        % Which should we try?
-        % all cols that are
-        % (i) not in pp and
-        % (ii) for which there are at least "need_at_least_rows" measurements
-        okcol = find(sum(ok(rowsol, :)) >= need_at_least_rows); % Det här kanske man ska modifiera (done)
+        % Now check for inliers on the rest of the cols (on the rows of the
+        % solution). Try all cols where a subset of the solution rows satisfy;
+        % (i) there are strictly more than "minsolver_nr_rows" measurements, and
+        okcol = find(sum(ok(rowsol, :)) > minsolver_nr_rows); % Det här kanske man ska modifiera (done)
+        % (ii) col was not in solution already
         restcols = setdiff(okcol, colsol);
         inliersrest = zeros(size(restcols));
         v_rest = zeros(rank_solv, length(restcols));
@@ -159,38 +154,39 @@ for iRansac = 1:opts.iters
 
             % First select a minimum number of ok rows for the solver.
             okrow = find(ok(rowsol, col_idx));
-            rows_cut = okrow(randperm(length(okrow), minimal_solver_nr_of_rows));
+            rows_cut = okrow(randperm(length(okrow), minsolver_nr_rows));
             z_cut = z(rowsol(rows_cut), col_idx);
             u_cut = u(rows_cut, :);
             a_cut = a(rows_cut);
-            % Now we should solve for 
-            % (z(cc,col_idx)-ony).^2  is equal to -2*(u*vny)+a+bny
+
+            % Solve the unknowns from,
+            % -2*(u*[v])+a+[b] == (z-[o]).^2
             switch opts.offset_type
                 case 'tdoa'
                     % In this case we need to get ony as well.
                     % Expand (z-ony).^2 as z.^2 -2z.*ony + ony.^2
                     % and rearrange to
                     % -2u*[vny] -1*[ony.^2] + 2z*[ony] + 1*[bny] == z.^2 - a
-                    AAA = [(-2*u_cut), -ones(minimal_solver_nr_of_rows, 1),... 
-                        2*z_cut, ones(minimal_solver_nr_of_rows, 1)];
+                    AAA = [(-2*u_cut), -ones(minsolver_nr_rows, 1),... 
+                        2*z_cut, ones(minsolver_nr_rows, 1)];
                     bbb = z_cut.^2 - a_cut;
                     x_part = AAA \ bbb;
-                    x_hom = [zeros(1,opts.rank), 1, 0, 1]';
                     ony = x_part(end-1);
-                    % Adjust bny if o^2 was off the mark.
+                    % Adjust xxx if o^2 was off the mark.
                     lamb = ony^2 - x_part(end-2);
+                    x_hom = [zeros(1,opts.rank), 1, 0, 1]';
                     xxx = x_part + lamb * x_hom;
                 case 'cotoa'
                     ony = osol(1);
                     d2_cut = (z_cut-ony).^2;
-                    AAA = [(-2*u_cut),ones(minimal_solver_nr_of_rows, 1)];
+                    AAA = [(-2*u_cut),ones(minsolver_nr_rows, 1)];
                     bbb = d2_cut - a_cut;
                     xxx = AAA \ bbb;
                 case 'toa'
                     % (z(cc,col_idx)-ony).^2  is equal to -2*(u*vny)+a+bny
                     ony = 0;
                     d2_cut = (z_cut-ony).^2;
-                    AAA = [(-2*u_cut),ones(minimal_solver_nr_of_rows, 1)];
+                    AAA = [(-2*u_cut),ones(minsolver_nr_rows, 1)];
                     bbb = d2_cut - a_cut;
                     xxx = AAA \ bbb;
             end
@@ -203,10 +199,10 @@ for iRansac = 1:opts.iters
             % this column
             err = (sqrt(relu(-2 * (u(okrow, :) * vny) + a(okrow) + bny)) + ony) - z(rowsol(okrow), col_idx);
             inlid = find(abs(err) < opts.threshold);
-            if length(inlid) > minimal_solver_nr_of_rows
+            if length(inlid) > minsolver_nr_rows
                 inliersrest(iCol) = 1;
                 inl_rest(okrow(inlid), iCol) = ones(length(inlid), 1);
-                nr_inliers = nr_inliers + length(inlid) - minimal_solver_nr_of_rows;
+                nr_inliers = nr_inliers + length(inlid) - minsolver_nr_rows;
                 tot_err = tot_err + sum(err(inlid).^2); % I am adding the five zeros here, but nevermind.
             end
         end

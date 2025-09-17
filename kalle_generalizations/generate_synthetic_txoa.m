@@ -85,3 +85,8 @@ out_high = out_range(2);
 z(outliers) = (out_high - out_low) * rand(nnz(outliers), 1) + out_low;
 %% Keep the noise as z
 gt.z = z;
+gt.sigma = sigma;
+gt.miss_ratio = miss_ratio;
+gt.out_ratio = out_ratio;
+gt.out_range = out_range;
+

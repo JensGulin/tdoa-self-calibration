@@ -34,9 +34,11 @@ possible_rows(sol.rows) = [];
 possible_rows(sum(isfinite(z(possible_rows, sol.cols)), 2) < sol.rank+2) = [];
 
 if isempty(possible_rows)
+    % Return "no change" now, may come back after extended cols.
     return;
 end
 
+% Even if only one possible row, allow iterations to sample many cols.
 for i = 1:opts.iters
     newrow = possible_rows(randi(length(possible_rows)));
     possible_cols = sol.cols(isfinite(z(newrow, sol.cols)));
@@ -81,6 +83,10 @@ for i = 1:opts.iters
         bestsol.a = [bestsol.a; anew];
         inlcols = [use_cols, test_cols(inind)];
         bestsol.inlmatrix(newrow, inlcols) = 1;
+        if 0 % For debug
+        besterr = err;
+        besttest = test_cols;
+        end
     end
 end
 

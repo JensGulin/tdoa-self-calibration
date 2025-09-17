@@ -42,7 +42,7 @@ if isnumeric(gt) && isnan(gt)
     opts.tol = NaN;
 end
 % Accept {'rs'} for 'register'.
-% TODO: Seems to work for display, is valid helping?
+% TODO: Seems to work for display, is validation helping?
 if iscell(opts.register)
     opts.register = opts.register{:};
 end

@@ -22,19 +22,28 @@ function [sols,coeffs] = solver_cotoa_rank3_55(z)
 
 % From ICASSP 2019 "ROBUST SELF-CALIBRATION OF CONSTANT OFFSET
 %   TIME-DIFFERENCE-OF-ARRIVAL"
-% f(o) = det(C' * (z − o).^2 * C) = 0
+% f(o) = det(C' * (z − o).^2 * C) == 0
 % In this case we only want o.
 % Expand (z-o).^2 as z.^2 -2z.*o + o.^2
 % and transform each term A into C'*A*C to get (see code)
-% Cz2C + C2zC .* o + 0
+% f(o) = det(Cz2C + C2zC .* -o + 0) == 0
+% (Keeping the sign with o instead of C2zC hints to disregard
+% the sign now, and just negate the roots at the end.)
 % Note that while o is a matrix of same size as z here, it's actually
 % a constant distributed to all elements, thus C'(o.^2)C = 0
-% and the element-wise multiplication can be separated from C2zC.
+% (also, the element-wise multiplication can be separated from C2zC).
 
 C = [-ones(1,4) ; eye(4)];
 Cz2C = C'*(z.^2)*C;
-C2zC = C'*(2*z)*C; % Should be -, but get coeffs for -o and then -roots.
-% Setting up a template that uses 
+C2zC = C'*(2*z)*C;
+
+% Setting up a template that indexes data to calculate the determinant
+% (as coeffs [c4, c3, c2, c1, c0], with f(o) = c4*o^4 + c3*o^3 + c2*o^2 + c1*o + c0).
+% Method is not clearly a standard Laplace expansion (for determinant), but
+% all combinations are calculated through the intermediaries, prod1 and
+% prod2 (minors), then further combined according to ids3. The sign and
+% order may be wrong, so finally CC2 tweaks and sums each coeff (degree of o).
+
 data = [Cz2C(:);C2zC(:)];
 ids1 = [ ...
 1 , 1 , 17 , 17 , 3 , 3 , 19 , 19 , 1 , 1 , 17 , 17 , 2 , 2 , 18 , 18 , 1 , 1 , 17 , 17 , 2 , 2 , 18 , 18 ; ...
@@ -57,7 +66,8 @@ ids3 = [ ...
 prod3 = prod1(ids3(1,:)).*prod2(ids3(2,:));
 
 CC2 = sparse([5 4 4 3 4 3 3 2 4 3 3 2 3 2 2 1 5 4 4 3 4 3 3 2 4 3 3 2 3 2 2 1 5 4 4 3 4 3 3 2 4 3 3 2 3 2 2 1 5 4 4 3 4 3 3 2 4 3 3 2 3 2 2 1 5 4 4 3 4 3 3 2 4 3 3 2 3 2 2 1 5 4 4 3 4 3 3 2 4 3 3 2 3 2 2 1],1:96,[ones(1,32) -ones(1,32) ones(1,32)],5,96);
+% Note: Negating roots at the end, as we solved for -o so far.
 sols = -roots(CC2*prod3);
 coeffs = CC2*prod3;
 
-sols = ones(5,1)*sols';
+sols = ones(5,1)*sols'; % Seems a bit faster than repmat.

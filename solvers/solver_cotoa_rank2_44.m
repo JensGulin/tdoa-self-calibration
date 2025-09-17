@@ -22,14 +22,16 @@ function [sols,coeffs] = solver_cotoa_rank2_44(z)
 
 % From ICASSP 2019 "ROBUST SELF-CALIBRATION OF CONSTANT OFFSET
 %   TIME-DIFFERENCE-OF-ARRIVAL"
-% f(o) = det(C' * (z − o).^2 * C) = 0
+% f(o) = det(C' * (z − o).^2 * C) == 0
 % In this case we only want o.
 % Expand (z-o).^2 as z.^2 -2z.*o + o.^2
 % and transform each term A into C'*A*C to get (see code)
-% f(o) = det(Cz2C - C2zC .* o + 0) = 0
+% f(o) = det(Cz2C + C2zC .* -o + 0) == 0
+% (Keeping the sign with o instead of C2zC hints to disregard
+% the sign now, and just negate the roots at the end.)
 % Note that while o is a matrix of same size as z here, it's actually
 % a constant distributed to all elements, thus C'(o.^2)C = 0
-% and the element-wise multiplication can be separated from C2zC.
+% (also, the element-wise multiplication can be separated from C2zC).
 
 C = [-ones(1,3) ; eye(3)];
 Cz2C = C'*(z.^2)*C;
@@ -37,9 +39,8 @@ C2zC = C'*(2*z)*C;
 
 % Setting up a template that indexes data to calculate the determinant
 % (as coeffs [c3, c2, c1, c0], with f(o) = c3*o^3 + c2*o^2 + c1*o + c0).
-% Here col 3 is chosen for Laplace expansion (for determinant).
-% Note: the - of C2zC is disregarded and brought in at the end.
-% ids1 represents the minors, ids2 the coefficients
+% Here col 3 is chosen for standard Laplace expansion (for determinant).
+% Note: ids1 represents the minors, ids2 the coefficients
 % of the corresponding weight. ids3 connects the output from
 % ids1 and ids2, and reorders to group the coefficents nicely.
 
@@ -58,10 +59,11 @@ ids3 = [ ...
     4 , 8 , 12 , 2 , 3 , 4 , 6 , 7 , 8 , 10 , 11 , 12 , 1 , 2 , 3 , 5 , 6 , 7 , 9 , 10 , 11 , 1 , 5 , 9 ; ...
     2 , 4 , 6 , 2 , 2 , 1 , 4 , 4 , 3 , 6 , 6 , 5 , 2 , 1 , 1 , 4 , 3 , 3 , 6 , 5 , 5 , 1 , 3 , 5 ];
 prod3 = prod1(ids3(1,:)).*prod2(ids3(2,:));
+% Note: Negating coeffs at the end, as we solved for -o so far.
 coeffs = [-sum(prod3(1:3)) sum(prod3(4:12)) -sum(prod3(13:21)) sum(prod3(22:24))];
 sols = roots(coeffs);
 
-sols = ones(4,1)*sols';
+sols = ones(4,1)*sols'; % Seems a bit faster than repmat.
 return
 
 %% Debug

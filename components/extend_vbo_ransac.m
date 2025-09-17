@@ -43,9 +43,11 @@ end
 possible_cols(sum(isfinite(z(sol.rows, possible_cols)), 1) < min_data+1) = [];
 
 if isempty(possible_cols)
+    % Return "no change" now, may come back after extended rows.
     return;
 end
 
+% Even if only one possible col, allow iterations to sample many rows.
 for i = 1:opts.iters
     newcol = possible_cols(randi(length(possible_cols)));
     possible_rows = sol.rows(isfinite(z(sol.rows, newcol)));
@@ -62,51 +64,45 @@ for i = 1:opts.iters
         rowsorder_test(k) = find(sol.rows == test_rows(k));
     end
 
-    % Estimate new cols in v, b and o using z(use_rows, newcol).
+    % Estimate new cols in v, b and o using z, u and a.
     usub = sol.u(rowsorder, :);
     asub = sol.a(rowsorder);
-    zsub = z(use_rows, newcol); % lurigt. U har r?tt ordning
+    zsub = z(use_rows, newcol); % Note: z is in canonical order.
 
-    % Slightly different cases for different offset_types
-    % AA = [-2 * zsub, ones(5, 1), -usub, -ones(5, 1)];
-    % bb = asub - zsub.^2;
-    % xx_part = AA \ bb;
-    % xx_hom = [0, 1, 0, 0, 0, 1]';
-    % onew = xx_part(1);
-    % lamb = onew^2 - xx_part(2);
-    % xx = xx_part + lamb * xx_hom;
-    % vnew = xx(3:5) / (-2); % TODO: Add -2 to AA instead.
-    % bnew = xx(6);
+    % Solve the unknowns from,
+    % -2*(u*[v])+a+[b] == (z-[o]).^2
     switch sol.offset_type
         case 'tdoa'
-            AAA = [-2 * zsub, ones(min_data, 1), (-usub), -ones(min_data, 1)];
-            bbb = asub - zsub.^2;
-            xx_part = AAA \ bbb;
-            xx_hom = [0, 1, zeros(1,sol.rank), 1]';
-            onew = xx_part(1);
-            lamb = onew^2 - xx_part(2);
-            xx = xx_part + lamb * xx_hom;
-            vnew = xx(3:(3+sol.rank-1)) / (-2); % TODO: Add -2 to AAA instead.
-            bnew = xx(end);
+            % In this case we need to solve o as well.
+            % Expand (z-[o]).^2 as z.^2 -2z.*[o] + [o.^2]
+            % and rearrange to
+            % -2u*[v] -1*[o.^2] + 2z*[o] + 1*[b] == z.^2 - a
+            AAA = [(-2*usub), -ones(min_data, 1),... 
+                2*zsub, ones(min_data, 1)];
+            bbb = zsub.^2 - asub;
+            x_part = AAA \ bbb;
+            onew = x_part(end-1);
+            % Adjust xxx if o^2 was off the mark.
+            lamb = ony^2 - x_part(end-2);
+            x_hom = [zeros(1,sol.rank), 1, 0, 1]';
+            xxx = x_part + lamb * x_hom;
         case 'cotoa'
-            % (z(cc,j)-ony).^2  is equal to -2*(u*vny)+a+bny
+            % constant o is known from sol
             onew = sol.o(1);
-            d2sub = (zsub-onew).^2;
-            AAA = [(-2*usub),ones(min_data, 1)];
-            bbb = d2sub - asub;
+            % -2u*[v] + 1*[b] == (z-[o]).^2 - a
+            AAA = [(-2*usub), ones(min_data, 1)];
+            bbb = (zsub-onew).^2 - asub;
             xxx = AAA \ bbb;
-            vnew = xxx(1:sol.rank); %
-            bnew = xxx(end);
         case 'toa'
-            % (z(cc,j)-ony).^2  is equal to -2*(u*vny)+a+bny
+            % zero o is known for TOA
             onew = 0;
-            d2sub = (zsub-onew).^2;
-            AAA = [(-2*usub),ones(min_data, 1)];
-            bbb = d2sub - asub;
+            % -2u*[v] + 1*[b] == (z-[o]).^2 - a
+            AAA = [(-2*usub), ones(min_data, 1)];
+            bbb = (zsub-onew).^2 - asub;
             xxx = AAA \ bbb;
-            vnew = xxx(1:sol.rank); %
-            bnew = xxx(end);
-    end;
+    end
+    vnew = xxx(1:sol.rank);
+    bnew = xxx(end);
 
     % Evaluate using rows in test_rows.
     utest = sol.u(rowsorder_test, :);
