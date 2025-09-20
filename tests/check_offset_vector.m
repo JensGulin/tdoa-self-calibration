@@ -44,8 +44,8 @@ if print
     disp("Worst error (per column):");
     disp(err);
     err = min(err);
-    disp("Error with precision:");
-    fprintf("    %e\n", err);
+    disp("Error with precision (and threshold):");
+    fprintf("    %e (%e)\n", err, opts.tol);
 end
 
 ok = nnz(ok); % Number of fully acceptable solutions
