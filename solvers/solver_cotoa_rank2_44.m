@@ -37,6 +37,28 @@ C = [-ones(1,3) ; eye(3)];
 Cz2C = C'*(z.^2)*C;
 C2zC = C'*(2*z)*C;
 
+%% Different approach: for A-oB, take the eigenvalues of inv(B)*A,
+% since the determinant is the product of eigenvalues.
+% f(o) = det(Cz2C + C2zC .* -o + 0) == 0
+% f(o) = det( C2zC * ( inv(C2zC)*Cz2C - I.*o) )
+%      = det(C2zC) * prod( eig( inv(C2zC)*Cz2C ) - o ) == 0
+% Any term of the product can be zero, exactly when eig == o.
+% With det(C2zC) non-zero, C2zC is invertible and the eig provides the roots.
+%    s = eig( inv(C2zC)*Cz2C );
+% QZ algorithm (generalized Schur) skips the inverse, thus works for missing inverse.
+% TODO: What cases need the generalized eigenvalues, are they more stable in any case?
+% Note, det(C2zC) == 0 could mean that o can't be solved this way in any case.
+% TODO: Could double check and discard where r < 3. 
+% (two or more identical generalized eigenvalues, and
+% corresponding eigenvectors span more than one independent direction.)
+%  tol = 1e-9; r = rank(A + o(k)*B, tol)
+    
+s = eig( Cz2C,C2zC );
+sols = ones(4,1)*s'; % Seems a bit faster than repmat.
+return;
+
+%%
+
 % Setting up a template that indexes data to calculate the determinant
 % (as coeffs [c3, c2, c1, c0], with f(o) = c3*o^3 + c2*o^2 + c1*o + c0).
 % Here col 3 is chosen for standard Laplace expansion (for determinant).
