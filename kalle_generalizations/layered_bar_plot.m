@@ -22,20 +22,23 @@ end
 categories = unique(layers(:));
 numCats = numel(categories);
 
-% If the bins are too tight, you get this error:
+%% If the bins are too tight, you get this error:
 %   Error using bar (line 182)
 %   XData values must be unique.
 %   Error in layered_bar_plot (line 57)
 % Workaround: add some padding.
 binEdges = max(x) - min(x);
-if (binEdges < 1e-15)
-    binEdges = 1e-16;
+if (binEdges <= 10*eps*numBins)
+    % Minimum bins
+    binEdges = 0:numBins;
+    binEdges = binEdges *10*eps;
+    binEdges = binEdges + mean(x) - mean(binEdges);
+    binCenters = binEdges(1:end-1);
 else
-    binEdges = 0;
+    % Compute bin edges
+    binEdges = linspace(min(x) - binEdges, max(x) + binEdges, numBins + 1);
+    binCenters = (binEdges(1:end-1) + binEdges(2:end)) / 2;
 end
-% Precompute bin edges
-binEdges = linspace(min(x) - binEdges, max(x) + binEdges, numBins + 1);
-binCenters = (binEdges(1:end-1) + binEdges(2:end)) / 2;
 
 % Initialize category frequency matrix
 categoryCounts = zeros(numCats, numBins);
