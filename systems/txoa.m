@@ -37,6 +37,7 @@ addParameter(p, 'mul2', 6); % Sets threshold based on sigma.
 addParameter(p, 'mul3', 10); % Sets threshold based on sigma.
 addParameter(p, 'mul4', 12); % Sets threshold based on sigma.
 addParameter(p, 'mul5', inf); % Sets threshold based on sigma.
+addParameter(p, 'iters', 1000);
 parse(p, varargin{:});
 opts = p.Results;
 
@@ -46,7 +47,7 @@ opts = p.Results;
 sol = init_uvabo_ransac(z, ...
     'display', opts.display, 'threshold', opts.mul1*opts.sigma,...
     'solver', opts.offsetsolver, 'offset_type', opts.offset_type, ...
-    'rank', min(opts.dims));
+    'rank', min(opts.dims), 'iters', opts.iters);
 
 % Bundle over u, v, a, b, o.
 sol = refine_uvabo(sol, 'display', opts.display);

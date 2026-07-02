@@ -432,6 +432,25 @@ check_solution(solrso,gt);
 
 
 
+%% CASE 3 - Generate synthetic data. COTOA RANK 3
+m = 15;
+n = 30;
+dim = [3 3];
+sigma = 1e-8;
+miss_ratio = 0.02;
+out_ratio = 0.00;
+
+% Generate data
+[z, gt] = generate_synthetic_txoa(m, n, dim, 'cotoa', sigma, miss_ratio, out_ratio);
+
+% Run system
+[r, s, o, solrso] = txoa(z, 'display', 'iter', 'sigma', max(sigma, 1e-6), 'dims', [3 3]);
+
+% Check solution
+check_solution(solrso,gt);
+
+
+
 
 
 
