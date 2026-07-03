@@ -157,14 +157,11 @@ out_ratio = 0.00;
 
 sols = solver_tdoa_rank1_53(z(1:5,1:3));
 check_offset_vector(sols,gt.o(1:3)');
-
-%disp("This may fail: solver_tdoa_rank2_56, not all close enough")
-%sols = solver_tdoa_rank1_44(z(1:4,1:4));
-%check_offset_vector(sols,gt.o(1:4)','tol',1e-3);
+% The 1D case is a bit special
 
 % Can reuse rank3 solvers too!
 sols = solver_cotoa_rank1_33(z(1:3,1:3));
-check_offset_vector(sols,gt.o(1:5)');
+check_offset_vector(sols,gt.o(1:3)');
 
 
 %% CASE 5 - Generate synthetic data. TOA RANK 3
@@ -290,7 +287,7 @@ out_ratio = 0.00;
 % Default solver.
 asolver = get_offset_solver_func(@solver_tdoa_rank1_53);
 
-[bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, 'offset_type','tdoa','solver',asolver,'display','iter','rank',2,'iters',1000);
+[bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z, 'offset_type','tdoa','solver',asolver,'display','iter','rank',1,'iters',1000);
 check_offset_vector(bestsol,gt);
 
 [sol, res, jac] = refine_uvabo(bestsol,'display','iter');

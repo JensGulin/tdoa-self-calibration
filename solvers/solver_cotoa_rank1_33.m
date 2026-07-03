@@ -1,6 +1,6 @@
 function [sols,coeffs] = solver_cotoa_rank1_33(z)
 % SOLVER_COTOA_RANK1_33 Solve TxOA offsets for a specific case.
-%   sols = SOLVER_COTOA_RANK2_44(z) solves for the offset o, given the
+%   sols = SOLVER_COTOA_RANK1_33(z) solves for the offset o, given the
 %       matrix of TxOA measurements z. The measurements are
 %       given by z_ij = || r_i - s_j || + o_j, where r_i and s_j are
 %       (unknown) receiver and senders positions. 
@@ -54,5 +54,5 @@ C2zC = C'*(2*z)*C;
 %  tol = 1e-9; r = rank(A + o(k)*B, tol)
     
 s = eig( Cz2C,C2zC );
-sols = ones(4,1)*s'; % Seems a bit faster than repmat.
+sols = ones(3,1)*s'; % Seems a bit faster than repmat.
 return;
