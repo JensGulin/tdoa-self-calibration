@@ -38,7 +38,7 @@ end
 r_dim = dims(1);
 s_dim = dims(end);
 
-if (~isnumeric(dims) || min(r_dim,s_dim) < 2)
+if (~isnumeric(dims) || min(r_dim,s_dim) < 1)
     error("Illegal dims: [%s] ", join(string(dims)))
 end
 max_dim = max(r_dim,s_dim);

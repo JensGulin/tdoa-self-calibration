@@ -21,6 +21,9 @@ function [r, s, o, sol] = txoa(z, varargin)
 %
 % See also get_offset_solvers.
 
+
+%keyboard;
+
 % Use (9r/5s) offset solver by default.
 default_solver = get_offset_solvers(3, 9, 5);
 
@@ -28,7 +31,7 @@ default_solver = get_offset_solvers(3, 9, 5);
 p = inputParser;
 valid_display = @(x) ismember(x, {'off', 'none', 'iter'});
 addParameter(p, 'display', 'off', valid_display);
-addParameter(p, 'offsetsolver', default_solver);
+%addParameter(p, 'offsetsolver', default_solver);
 addParameter(p, 'offset_type', 'tdoa');
 addParameter(p, 'dims', [3 3]);
 addParameter(p, 'sigma', 0.01);
@@ -41,7 +44,40 @@ addParameter(p, 'iters', 1000);
 parse(p, varargin{:});
 opts = p.Results;
 
+solver_key = sprintf('%s_rank%d', lower(opts.offset_type), min(opts.dims));
+switch solver_key
+    case 'tdoa_rank1'
+        asolver = get_offset_solver_func(@solver_tdoa_rank1_53);
+    case 'tdoa_rank2'
+        asolver = get_offset_solver_func(@solver_tdoa_rank2_74);
+    case 'tdoa_rank3'
+        asolver = get_offset_solver_func(@solver_tdoa_rank3_95);
+
+    case 'cotoa_rank1'
+        asolver = get_offset_solver_func(@solver_cotoa_rank1_33);
+    case 'cotoa_rank2'
+        asolver = get_offset_solver_func(@solver_cotoa_rank2_44);
+    case 'cotoa_rank3'
+        asolver = get_offset_solver_func(@solver_cotoa_rank3_55);
+
+    case 'toa_rank1'
+        asolver = get_offset_solver_func(@solver_toa_rank1_32);
+    case 'toa_rank2'
+        asolver = get_offset_solver_func(@solver_toa_rank2_43);
+    case 'toa_rank3'
+        asolver = get_offset_solver_func(@solver_toa_rank3_54);
+
+    otherwise
+        error('Unknown solver case: %s', solver_key);
+end
+addParameter(p, 'offsetsolver', asolver);
+parse(p, varargin{:});
+opts = p.Results;
+
+
 % TODO: Generalize for other dimensions than 3D.
+
+%keyboard;
 
 % Find initial u, v, a, b, o.
 sol = init_uvabo_ransac(z, ...

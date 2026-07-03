@@ -16,6 +16,8 @@ function [bestsol, max_inliers, best_err, stats1, stats2] = init_uvabo_ransac(z,
 %    robust methods.
 % 3. Inliers are counted and the best solution is kept.
 
+%keyboard;
+
 % Default solver.
 default_solver.solv = @solver_tdoa_rank3_95;
 default_solver.name = func2str(default_solver.solv);
@@ -35,8 +37,42 @@ addParameter(p, 'offset_type', 'tdoa');
 addParameter(p, 'rank', 3);
 parse(p, varargin{:});
 opts = p.Results;
-%TODO: Reconsider solver selection, read rank etc from the solver.
-% If no solver given, use the function to get them.
+
+% %TODO: Reconsider solver selection, read rank etc from the solver.
+% % If no solver given, use the function to get them.
+% % Tried to do this now
+% solver_key = sprintf('%s_rank%d', lower(opts.offset_type), opts.rank);
+% switch solver_key
+%     case 'tdoa_rank1'
+%         asolver = get_offset_solver_func(@solver_tdoa_rank1_53);
+%     case 'tdoa_rank2'
+%         asolver = get_offset_solver_func(@solver_tdoa_rank2_74);
+%     case 'tdoa_rank3'
+%         asolver = get_offset_solver_func(@solver_tdoa_rank3_95);
+% 
+%     case 'cotoa_rank1'
+%         asolver = get_offset_solver_func(@solver_cotoa_rank1_33);
+%     case 'cotoa_rank2'
+%         asolver = get_offset_solver_func(@solver_cotoa_rank2_44);
+%     case 'cotoa_rank3'
+%         asolver = get_offset_solver_func(@solver_cotoa_rank3_55);
+% 
+%     case 'toa_rank1'
+%         asolver = get_offset_solver_func(@solver_toa_rank1_32);
+%     case 'toa_rank2'
+%         asolver = get_offset_solver_func(@solver_toa_rank2_43);
+%     case 'toa_rank3'
+%         asolver = get_offset_solver_func(@solver_toa_rank3_54);
+% 
+%     otherwise
+%         error('Unknown solver case: %s', solver_key);
+% end
+% addParameter(p, 'solver', asolver);
+% parse(p, varargin{:});
+% opts = p.Results;
+
+%keyboard;
+
 
 % Display.
 if ~any(strcmpi(opts.display, {'off', 'none'}))
