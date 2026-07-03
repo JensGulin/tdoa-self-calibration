@@ -31,6 +31,9 @@ end
 if nargin < 8
     out_range = [-2 6];
 end
+if nargin < 9
+    seed = [];
+end
 if nargin >= 9 && ~isempty(seed)
     rng(seed);
 end
@@ -77,6 +80,8 @@ gt.o = o;
 gt.d = d;
 gt.gt_z = z;
 gt.inlmatrix = ~missing & ~outliers;
+gt.missing = missing;
+gt.outliers = outliers;
 % Make the struct a 'solution' struct
 gt.offset_type = type;
 gt.type = 'gt_rso';
@@ -98,3 +103,4 @@ gt.sigma = sigma;
 gt.miss_ratio = miss_ratio;
 gt.out_ratio = out_ratio;
 gt.out_range = out_range;
+gt.seed = seed;
